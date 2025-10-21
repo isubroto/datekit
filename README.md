@@ -94,7 +94,7 @@ DateKit (core)
 
 - Constructors: `new DateKit(date?: DateInput, config?: DateKitConfig)`
 - Formatting: `format(pattern)`
-- Timezone Support: `formatInTimezone`, `convertTimezone`, `fromTimezone`, `getTimezoneOffset`, `formatFromTimezoneString`
+- Timezone Support: `formatInTimezone`, `convertTimezone`, `fromTimezone`, `getTimezoneOffset`, `formatFromTimezoneString`, `formatZonedDate` (static & instance)
 - Getters/Converters: `toDate`, `toISOString`, `toUnix`, `valueOf`, `toArray`, `toObject`, `toJSON`, `toString`
 - Individual Unit Getters: `year`, `month`, `getDate`, `day`, `hour`, `minute`, `second`, `millisecond`, `quarter`, `week`, `isoWeek`, `weekday`, `isoWeekday`, `dayOfYear`, `weekYear`
 - Setters: `set({})`, `setYear`, `setMonth`, `setDate`, `setHour`, `setMinute`, `setSecond`, `setMillisecond`, `setQuarter`
@@ -242,6 +242,47 @@ DateKit.formatFromTimezoneString(dateString, "DD-MM-YYYY");
 DateKit.formatFromTimezoneString(dateString, "YYYY-MM-DD HH:mm:ss");
 // '2025-08-31 00:00:00'
 ```
+
+#### formatZonedDate
+
+Enhanced version of `formatFromTimezoneString` with locale support. Available as both **static** and **instance** methods:
+
+**Static method** (with explicit locale):
+
+```typescript
+const dateString =
+  "Sun Aug 31 2025 00:00:00 GMT+0600 (Bangladesh Standard Time)";
+
+// Default format (DD-MM-YYYY) with English locale
+DateKit.formatZonedDate(dateString);
+// '31-08-2025'
+
+// Custom format with English locale
+DateKit.formatZonedDate(dateString, "MMMM DD, YYYY", "en");
+// 'August 31, 2025'
+
+// Custom format with Spanish locale
+DateKit.formatZonedDate(dateString, "MMMM DD, YYYY", "es");
+// 'Agosto 31, 2025'
+```
+
+**Instance method** (uses instance's locale):
+
+```typescript
+const dateString = "Mon Dec 25 2024 10:30:00 GMT-0500 (Eastern Standard Time)";
+
+// English instance
+const enKit = new DateKit({ locale: "en" });
+enKit.formatZonedDate(dateString, "dddd, MMMM DD, YYYY");
+// 'Monday, December 25, 2024'
+
+// Spanish instance
+const esKit = new DateKit({ locale: "es" });
+esKit.formatZonedDate(dateString, "dddd, MMMM DD, YYYY");
+// 'Lunes, Diciembre 25, 2024'
+```
+
+Both methods handle GMT offset strings (GMT+0600, GMT-0500, etc.) and preserve the date/time in the original timezone.
 
 #### Common Use Cases
 
@@ -561,7 +602,7 @@ DateKit.isValid("2024-01-15"); // true/false
 DateKit.max("2024-01-01", "2024-06-15", "2024-03-20").format("YYYY-MM-DD"); // 2024-06-15
 DateKit.min("2024-01-01", "2024-06-15", "2024-03-20").format("YYYY-MM-DD"); // 2024-01-01
 
-// Timezone methods
+// Timezone methods (static)
 DateKit.formatInTimezone(date, "Asia/Dhaka", "DD-MM-YYYY HH:mm");
 DateKit.convertTimezone(
   date,
@@ -575,6 +616,16 @@ DateKit.formatFromTimezoneString(
   "Sun Aug 31 2025 00:00:00 GMT+0600",
   "DD-MM-YYYY"
 );
+DateKit.formatZonedDate(
+  "Sun Aug 31 2025 00:00:00 GMT+0600",
+  "MMMM DD, YYYY",
+  "en"
+); // 'August 31, 2025'
+
+// Timezone method (instance)
+const dk = new DateKit({ locale: "es" });
+dk.formatZonedDate("Mon Dec 25 2024 10:30:00 GMT-0500", "MMMM DD, YYYY");
+// 'Diciembre 25, 2024' (uses instance locale)
 
 import { Duration } from "@yourname/datekit";
 DateKit.isDuration(new Duration(5, "days")); // true
