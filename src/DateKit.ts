@@ -183,6 +183,74 @@ export class DateKit {
   }
 
   /**
+   * Static method: Formats a timezone-aware date string with explicit GMT offset.
+   * Preserves the local date components from the specified timezone.
+   *
+   * @param input - The timezone-aware date string with GMT offset (e.g., "Sun Aug 31 2025 00:00:00 GMT+0600")
+   * @param outputFormat - The format string for the output (default: "DD-MM-YYYY")
+   * @param locale - The locale for formatting (default: "en")
+   * @returns The formatted date string preserving the original timezone's date
+   *
+   * @example
+   * DateKit.formatZonedDate("Sun Aug 31 2025 00:00:00 GMT+0600 (Bangladesh Standard Time)", "DD-MM-YYYY")
+   * // Returns: "31-08-2025"
+   */
+  static formatZonedDate(
+    input: string,
+    outputFormat: string = "DD-MM-YYYY",
+    locale: string = "en"
+  ): string {
+    if (typeof input !== "string") {
+      throw new Error(
+        "formatZonedDate expects input as a string with explicit GMT offset"
+      );
+    }
+
+    // Match "GMT+0600" or "GMT-0530" or "GMT+06:00"
+    const m = input.match(/GMT([+-])(\d{2}):?(\d{2})/i);
+    const parsed = new Date(input);
+
+    if (isNaN(parsed.getTime())) {
+      throw new Error("Invalid date input for formatZonedDate");
+    }
+
+    // If GMT offset present, compute minutes
+    let zonedDate = parsed;
+    if (m) {
+      const sign = m[1] === "-" ? -1 : 1;
+      const hh = parseInt(m[2], 10);
+      const mm = parseInt(m[3], 10);
+      const offsetMinutes = sign * (hh * 60 + mm);
+
+      // Adjust the UTC epoch by the offset to reconstruct the "local" components
+      // Example: 2025-08-30T18:00Z + 360 minutes = 2025-08-31T00:00Z
+      const localMs = parsed.getTime() + offsetMinutes * 60_000;
+      zonedDate = new Date(localMs);
+    }
+
+    // Use existing formatter (UTC-based), now fed with adjusted date to preserve local day
+    return formatDate(zonedDate, outputFormat, locale);
+  }
+
+  /**
+   * Instance method: Formats a timezone-aware date string using the instance's locale.
+   * Convenience wrapper around the static formatZonedDate method.
+   *
+   * @param input - The timezone-aware date string with GMT offset
+   * @param outputFormat - The format string for the output (default: "DD-MM-YYYY")
+   * @returns The formatted date string preserving the original timezone's date
+   *
+   * @example
+   * const dk = new DateKit('2025-01-15', { locale: 'es' });
+   * dk.formatZonedDate("Sun Aug 31 2025 00:00:00 GMT+0600", "DD-MM-YYYY")
+   * // Returns: "31-08-2025" (uses 'es' locale from instance)
+   */
+  formatZonedDate(input: string, outputFormat: string = "DD-MM-YYYY"): string {
+    const locale = this.config?.locale ?? "en";
+    return DateKit.formatZonedDate(input, outputFormat, locale);
+  }
+
+  /**
    * Converts a date from one IANA timezone to another and formats it.
    *
    * @param date - The input date (can be Date, string, or number)
