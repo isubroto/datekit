@@ -1,0 +1,60 @@
+{
+  "name": "@subrotosaha/datekit",
+  "version": "0.1.0",
+  "description": "A comprehensive TypeScript library for date manipulation.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:verbose": "vitest run tests/verbose/DateKit.verbose.complete.test.ts",
+    "test:types": "vitest run tests/verbose/complete/DateKit.types.test.ts",
+    "test:methods": "vitest run tests/verbose/complete/DateKit.all-methods.test.ts",
+    "test:duration": "vitest run tests/verbose/complete/Duration.all-methods.test.ts",
+    "test:all-verbose": "vitest run tests/verbose/complete",
+    "lint": "eslint src --ext .ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "date",
+    "time",
+    "datetime",
+    "typescript",
+    "datekit",
+    "moment",
+    "date-fns",
+    "dayjs",
+    "timezone",
+    "locale",
+    "duration",
+    "business-days",
+    "calendar"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@vitest/coverage-v8": "^1.0.4",
+    "@vitest/ui": "^1.0.4",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4"
+  }
+}
