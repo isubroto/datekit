@@ -28,6 +28,7 @@
     "test:types": "vitest run tests/verbose/complete/DateKit.types.test.ts",
     "test:methods": "vitest run tests/verbose/complete/DateKit.all-methods.test.ts",
     "test:duration": "vitest run tests/verbose/complete/Duration.all-methods.test.ts",
+    "test:timezone": "vitest run tests/timezone-format.test.ts",
     "test:all-verbose": "vitest run tests/verbose/complete",
     "lint": "eslint src --ext .ts",
     "prepublishOnly": "npm run build"
