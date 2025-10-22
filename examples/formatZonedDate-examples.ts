@@ -29,7 +29,9 @@ dateStrings.forEach((dateStr, index) => {
 });
 
 // With different formats
+console.log("=".repeat(70));
 console.log("Different output formats (static method):");
+console.log("=".repeat(70));
 const sampleDate =
   "Sun Aug 31 2025 14:30:00 GMT+0600 (Bangladesh Standard Time)";
 console.log(
