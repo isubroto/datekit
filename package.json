@@ -62,12 +62,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/subrotosaha/datekit.git"
+    "url": "git+https://github.com/isubroto/datekit.git"
   },
   "bugs": {
-    "url": "https://github.com/subrotosaha/datekit/issues"
+    "url": "https://github.com/isubroto/datekit/issues"
   },
-  "homepage": "https://github.com/subrotosaha/datekit#readme",
+  "homepage": "https://github.com/isubroto/datekit#readme",
   "engines": {
     "node": ">=16.0.0"
   },
