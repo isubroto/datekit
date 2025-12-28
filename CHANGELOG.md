@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/isubroto/datekit/compare/v1.0.0...v1.1.0) (2025-12-28)
+
+
+### Features
+
+* **DateKit:** Add support for Date and timestamp inputs ([456b4d3](https://github.com/isubroto/datekit/commit/456b4d36390c69b30fc7ddc912be1f3e9c5f0d68))
+
 # 1.0.0 (2025-12-28)
 
 

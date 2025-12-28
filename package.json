@@ -1,6 +1,6 @@
 {
   "name": "@subrotosaha/datekit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A modern, lightweight TypeScript library for date manipulation with timezone support, business days, and chainable API.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
