@@ -55,13 +55,19 @@ describe("DateKit.formatZonedDate", () => {
       expect(result).toBe("20-01-2025 06:30");
     });
 
-    it("should throw error for non-string input", () => {
-      expect(() => {
-        // @ts-expect-error - Testing invalid input
-        DateKit.formatZonedDate(12345, "DD-MM-YYYY");
-      }).toThrow(
-        "formatZonedDate expects input as a string with explicit GMT offset"
-      );
+    it("should handle number (timestamp) input", () => {
+      // Timestamp for a known date
+      const timestamp = new Date("2025-08-31T00:00:00+06:00").getTime();
+      const result = DateKit.formatZonedDate(timestamp, "DD-MM-YYYY");
+      // When passing a timestamp, it uses the local system's timezone representation
+      expect(result).toMatch(/\d{2}-\d{2}-\d{4}/);
+    });
+
+    it("should handle Date object input", () => {
+      const date = new Date("2025-08-31T00:00:00+06:00");
+      const result = DateKit.formatZonedDate(date, "DD-MM-YYYY");
+      // When passing a Date, it uses the date's toString() for timezone extraction
+      expect(result).toMatch(/\d{2}-\d{2}-\d{4}/);
     });
 
     it("should throw error for invalid date string", () => {

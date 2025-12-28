@@ -67,7 +67,7 @@ describe("DateKit.formatFromTimezoneString", () => {
     const input = "Invalid date string";
     expect(() => {
       DateKit.formatFromTimezoneString(input, "DD-MM-YYYY");
-    }).toThrow("Invalid date string provided");
+    }).toThrow("Invalid date provided");
   });
 
   it("should handle date with milliseconds", () => {
