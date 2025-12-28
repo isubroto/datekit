@@ -1,0 +1,29 @@
+# Source files
+src/
+tests/
+examples/
+
+# Config files
+tsconfig.json
+tsconfig.build.json
+vitest.config.ts
+.gitignore
+
+# Development files
+*.log
+*.test.ts
+*.spec.ts
+.git/
+node_modules/
+
+# Test results
+comprehensive-test-results.txt
+coverage/
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
