@@ -108,27 +108,42 @@ export class DateKit {
   }
 
   /**
-   * Parses a timezone-aware date string and formats it in the original timezone
+   * Parses a timezone-aware date and formats it in the original timezone
    * without applying timezone conversion. This ensures the local date components
    * remain unchanged regardless of the timezone offset.
    *
-   * @param dateString - The timezone-aware date string (e.g., "Sun Aug 31 2025 00:00:00 GMT+0600 (Bangladesh Standard Time)")
+   * @param dateInput - The timezone-aware date (can be Date, string, or number/timestamp)
    * @param formatStr - The format string for the output (e.g., "DD-MM-YYYY")
    * @returns The formatted date string preserving the original timezone's date
    *
    * @example
    * DateKit.formatFromTimezoneString("Sun Aug 31 2025 00:00:00 GMT+0600 (Bangladesh Standard Time)", "DD-MM-YYYY")
    * // Returns: "31-08-2025"
+   * @example
+   * DateKit.formatFromTimezoneString(new Date("2025-08-31T00:00:00+06:00"), "DD-MM-YYYY")
+   * // Returns: "31-08-2025"
    */
   static formatFromTimezoneString(
-    dateString: string,
+    dateInput: DateInput,
     formatStr: string
   ): string {
-    // Parse the date string - JavaScript Date constructor handles various timezone formats
-    const parsedDate = new Date(dateString);
+    // Convert DateInput to string for timezone extraction if needed
+    let dateString: string;
+    let parsedDate: Date;
+
+    if (dateInput instanceof Date) {
+      parsedDate = dateInput;
+      dateString = dateInput.toString();
+    } else if (typeof dateInput === 'number') {
+      parsedDate = new Date(dateInput);
+      dateString = parsedDate.toString();
+    } else {
+      dateString = dateInput;
+      parsedDate = new Date(dateInput);
+    }
 
     if (isNaN(parsedDate.getTime())) {
-      throw new Error("Invalid date string provided");
+      throw new Error("Invalid date provided");
     }
 
     // Extract timezone offset from the original string
@@ -183,10 +198,10 @@ export class DateKit {
   }
 
   /**
-   * Static method: Formats a timezone-aware date string with explicit GMT offset.
+   * Static method: Formats a timezone-aware date with explicit GMT offset.
    * Preserves the local date components from the specified timezone.
    *
-   * @param input - The timezone-aware date string with GMT offset (e.g., "Sun Aug 31 2025 00:00:00 GMT+0600")
+   * @param input - The timezone-aware date (can be Date, string, or number/timestamp)
    * @param outputFormat - The format string for the output (default: "DD-MM-YYYY")
    * @param locale - The locale for formatting (default: "en")
    * @returns The formatted date string preserving the original timezone's date
@@ -194,25 +209,36 @@ export class DateKit {
    * @example
    * DateKit.formatZonedDate("Sun Aug 31 2025 00:00:00 GMT+0600 (Bangladesh Standard Time)", "DD-MM-YYYY")
    * // Returns: "31-08-2025"
+   * @example
+   * DateKit.formatZonedDate(new Date("2025-08-31T00:00:00+06:00"), "DD-MM-YYYY")
+   * // Returns: "31-08-2025"
    */
   static formatZonedDate(
-    input: string,
+    input: DateInput,
     outputFormat: string = "DD-MM-YYYY",
     locale: string = "en"
   ): string {
-    if (typeof input !== "string") {
-      throw new Error(
-        "formatZonedDate expects input as a string with explicit GMT offset"
-      );
-    }
+    // Convert DateInput to string for timezone extraction if needed
+    let inputString: string;
+    let parsed: Date;
 
-    // Match "GMT+0600" or "GMT-0530" or "GMT+06:00"
-    const m = input.match(/GMT([+-])(\d{2}):?(\d{2})/i);
-    const parsed = new Date(input);
+    if (input instanceof Date) {
+      parsed = input;
+      inputString = input.toString();
+    } else if (typeof input === 'number') {
+      parsed = new Date(input);
+      inputString = parsed.toString();
+    } else {
+      inputString = input;
+      parsed = new Date(input);
+    }
 
     if (isNaN(parsed.getTime())) {
       throw new Error("Invalid date input for formatZonedDate");
     }
+
+    // Match "GMT+0600" or "GMT-0530" or "GMT+06:00"
+    const m = inputString.match(/GMT([+-])(\d{2}):?(\d{2})/i);
 
     // If GMT offset present, compute minutes
     let zonedDate = parsed;
@@ -233,10 +259,10 @@ export class DateKit {
   }
 
   /**
-   * Instance method: Formats a timezone-aware date string using the instance's locale.
+   * Instance method: Formats a timezone-aware date using the instance's locale.
    * Convenience wrapper around the static formatZonedDate method.
    *
-   * @param input - The timezone-aware date string with GMT offset
+   * @param input - The timezone-aware date (can be Date, string, or number/timestamp)
    * @param outputFormat - The format string for the output (default: "DD-MM-YYYY")
    * @returns The formatted date string preserving the original timezone's date
    *
@@ -244,8 +270,12 @@ export class DateKit {
    * const dk = new DateKit('2025-01-15', { locale: 'es' });
    * dk.formatZonedDate("Sun Aug 31 2025 00:00:00 GMT+0600", "DD-MM-YYYY")
    * // Returns: "31-08-2025" (uses 'es' locale from instance)
+   * @example
+   * const dk = new DateKit('2025-01-15', { locale: 'es' });
+   * dk.formatZonedDate(new Date("2025-08-31T00:00:00+06:00"), "DD-MM-YYYY")
+   * // Returns: "31-08-2025"
    */
-  formatZonedDate(input: string, outputFormat: string = "DD-MM-YYYY"): string {
+  formatZonedDate(input: DateInput, outputFormat: string = "DD-MM-YYYY"): string {
     const locale = this.config?.locale ?? "en";
     return DateKit.formatZonedDate(input, outputFormat, locale);
   }
@@ -315,10 +345,10 @@ export class DateKit {
       const localDateString = `${year}-${month
         .toString()
         .padStart(2, "0")}-${day.toString().padStart(2, "0")}T${hour
-        .toString()
-        .padStart(2, "0")}:${minute.toString().padStart(2, "0")}:${second
-        .toString()
-        .padStart(2, "0")}`;
+          .toString()
+          .padStart(2, "0")}:${minute.toString().padStart(2, "0")}:${second
+            .toString()
+            .padStart(2, "0")}`;
 
       // Get UTC timestamp for this local time in fromTimezone
       const utcDate = new Date(
@@ -429,8 +459,8 @@ export class DateKit {
     const dateString = `${year}-${month.toString().padStart(2, "0")}-${day
       .toString()
       .padStart(2, "0")}T${hour.toString().padStart(2, "0")}:${minute
-      .toString()
-      .padStart(2, "0")}:${second.toString().padStart(2, "0")}`;
+        .toString()
+        .padStart(2, "0")}:${second.toString().padStart(2, "0")}`;
 
     // Parse it as if it's in the specified timezone
     const formatter = new Intl.DateTimeFormat("en-US", {
