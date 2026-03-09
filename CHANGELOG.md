@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/isubroto/datekit/compare/v1.1.0...v1.2.0) (2026-03-09)
+
+
+### Features
+
+* add locales, robust parsing, tz and duration fixesAdd10 new built-in locales (fr, de, hi, ur, ru, plus others) andregister them in the locales index so consumers can use many languagesincluding RTL support (ar, ur). Update README to document13 locales andparsing/DateRange features. ([2afc5df](https://github.com/isubroto/datekit/commit/2afc5dfcc68fe1d42802c4382151d032dbf11cf9))
+
 # [1.1.0](https://github.com/isubroto/datekit/compare/v1.0.0...v1.1.0) (2025-12-28)
 
 
