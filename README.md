@@ -21,15 +21,15 @@
 
 DateKit is a modern, lightweight date/time library that combines the best ideas from Moment.js, date-fns, and Day.js with a fresh, developer-friendly API.
 
-| Feature | DateKit | Moment.js | date-fns | Day.js |
-|---------|---------|-----------|----------|--------|
-| **Immutable** | ✅ | ❌ | ✅ | ✅ |
-| **TypeScript-first** | ✅ | Partial | ✅ | Partial |
-| **Chainable API** | ✅ | ✅ | ❌ | ✅ |
-| **UTC-first** | ✅ | ❌ | ❌ | Optional |
-| **IANA Timezone Support** | ✅ Built-in | Plugin | Separate pkg | Plugin |
-| **Business Days** | ✅ Built-in | ❌ | ❌ | ❌ |
-| **Zero Dependencies** | ✅ | ❌ | ✅ | ✅ |
+| Feature                   | DateKit     | Moment.js | date-fns     | Day.js   |
+| ------------------------- | ----------- | --------- | ------------ | -------- |
+| **Immutable**             | ✅          | ❌        | ✅           | ✅       |
+| **TypeScript-first**      | ✅          | Partial   | ✅           | Partial  |
+| **Chainable API**         | ✅          | ✅        | ❌           | ✅       |
+| **UTC-first**             | ✅          | ❌        | ❌           | Optional |
+| **IANA Timezone Support** | ✅ Built-in | Plugin    | Separate pkg | Plugin   |
+| **Business Days**         | ✅ Built-in | ❌        | ❌           | ❌       |
+| **Zero Dependencies**     | ✅          | ❌        | ✅           | ✅       |
 
 ### 🎯 Key Features
 
@@ -39,7 +39,9 @@ DateKit is a modern, lightweight date/time library that combines the best ideas 
 - 🎨 **Chainable API** — Fluent, readable code
 - 🌐 **IANA Timezone Support** — Full timezone conversion built-in
 - 📊 **Business Day Calculations** — Skip weekends and holidays
-- 🌍 **i18n Ready** — Extensible locale system
+- 🌍 **i18n Ready** — 13 built-in locales with RTL support (Arabic, Urdu)
+- 🗓️ **DateRange** — Inclusive date ranges with set operations (intersection, union, overlap)
+- 🔍 **Format-String Parsing** — `DateKit.parse(str, format)` for any date format
 - 📝 **TypeScript Native** — Full type safety and IntelliSense
 
 ---
@@ -71,10 +73,7 @@ const date = new DateKit("2024-03-15T14:30:00Z");
 console.log(date.format("MMMM D, YYYY")); // "March 15, 2024"
 
 // Chain operations (all immutable!)
-const futureDate = date
-  .add(2, "week")
-  .startOf("month")
-  .setHour(9);
+const futureDate = date.add(2, "week").startOf("month").setHour(9);
 
 console.log(futureDate.format("dddd, MMMM D, YYYY [at] h:mm A"));
 // "Monday, April 1, 2024 at 9:00 AM"
@@ -110,6 +109,17 @@ console.log(meeting.humanize()); // "an hour"
 - [Localization](#localization)
 - [Intervals](#intervals)
 - [Static Methods](#static-methods)
+- [Parse with Format](#parse-with-format)
+
+</details>
+
+<details>
+<summary><strong>📅 DateRange Class</strong></summary>
+
+- [Creating Date Ranges](#creating-date-ranges)
+- [Predicates](#range-predicates)
+- [Set Operations](#set-operations)
+- [Metrics](#range-metrics)
 
 </details>
 
@@ -159,9 +169,9 @@ const fromUnix = DateKit.unix(1710513000);
 
 // With configuration
 const configured = new DateKit("2024-03-15", {
-  locale: "es",           // Spanish locale
-  weekStartsOn: 1,        // Monday = 1
-  strictParsing: true     // Strict date parsing
+  locale: "es", // Spanish locale
+  weekStartsOn: 1, // Monday = 1
+  strictParsing: true, // Strict date parsing
 });
 ```
 
@@ -175,18 +185,18 @@ Transform dates into human-readable strings:
 const date = new DateKit("2024-03-15T14:30:45.123Z");
 
 // Common formats
-date.format("YYYY-MM-DD");           // "2024-03-15"
-date.format("DD/MM/YYYY");           // "15/03/2024"
-date.format("MMMM D, YYYY");         // "March 15, 2024"
-date.format("dddd, MMMM Do YYYY");   // "Friday, March 15th 2024"
+date.format("YYYY-MM-DD"); // "2024-03-15"
+date.format("DD/MM/YYYY"); // "15/03/2024"
+date.format("MMMM D, YYYY"); // "March 15, 2024"
+date.format("dddd, MMMM Do YYYY"); // "Friday, March 15th 2024"
 
 // With time
-date.format("YYYY-MM-DD HH:mm:ss");  // "2024-03-15 14:30:45"
-date.format("h:mm A");               // "2:30 PM"
-date.format("HH:mm:ss.SSS");         // "14:30:45.123"
+date.format("YYYY-MM-DD HH:mm:ss"); // "2024-03-15 14:30:45"
+date.format("h:mm A"); // "2:30 PM"
+date.format("HH:mm:ss.SSS"); // "14:30:45.123"
 
 // Complex formats
-date.format("[Today is] dddd");      // "Today is Friday"
+date.format("[Today is] dddd"); // "Today is Friday"
 date.format("Qo [quarter of] YYYY"); // "1st quarter of 2024"
 
 // With locale
@@ -224,8 +234,8 @@ DateKit.formatInTimezone(utcDate, "Asia/Dhaka", "YYYY-MM-DD HH:mm");
 // Meeting at 2:30 PM in Dhaka - what time in New York?
 DateKit.convertTimezone(
   "2024-12-25T14:30:00",
-  "Asia/Dhaka",           // Source timezone
-  "America/New_York",     // Target timezone  
+  "Asia/Dhaka", // Source timezone
+  "America/New_York", // Target timezone
   "YYYY-MM-DD HH:mm"
 );
 // → "2024-12-25 03:30" (10.5 hour difference)
@@ -250,7 +260,11 @@ tokyoMorning.toISOString();
 // → "2024-12-25T00:00:00.000Z" (stored as UTC internally)
 
 // Display it in another timezone
-DateKit.formatInTimezone(tokyoMorning.toDate(), "America/Los_Angeles", "h:mm A");
+DateKit.formatInTimezone(
+  tokyoMorning.toDate(),
+  "America/Los_Angeles",
+  "h:mm A"
+);
 // → "4:00 PM" (previous day!)
 ```
 
@@ -260,7 +274,8 @@ Parse browser-generated date strings and format them **preserving the original t
 
 ```typescript
 // Browser's Date.toString() output with timezone info
-const browserDate = "Sun Dec 25 2024 00:00:00 GMT+0600 (Bangladesh Standard Time)";
+const browserDate =
+  "Sun Dec 25 2024 00:00:00 GMT+0600 (Bangladesh Standard Time)";
 
 // ✅ Preserves the local date (midnight in Bangladesh)
 DateKit.formatFromTimezoneString(browserDate, "YYYY-MM-DD HH:mm");
@@ -291,9 +306,9 @@ frenchKit.formatZonedDate(dateString, "dddd D MMMM YYYY");
 
 ```typescript
 // Current offset for a timezone
-DateKit.getTimezoneOffset("Asia/Kolkata");      // 330 (UTC+5:30)
-DateKit.getTimezoneOffset("America/New_York");  // -300 or -240 (depends on DST)
-DateKit.getTimezoneOffset("UTC");               // 0
+DateKit.getTimezoneOffset("Asia/Kolkata"); // 330 (UTC+5:30)
+DateKit.getTimezoneOffset("America/New_York"); // -300 or -240 (depends on DST)
+DateKit.getTimezoneOffset("UTC"); // 0
 
 // Check offset at a specific date (for DST-aware calculations)
 const summer = new Date("2024-07-15");
@@ -309,23 +324,23 @@ DateKit.getTimezoneOffset("America/New_York", winter); // -300 (EST)
 
 Access individual date/time components (all UTC-based):
 
-| Method | Returns | Example |
-|--------|---------|---------|
-| `year()` | Full year | `2024` |
-| `month()` | Month (0-indexed) | `2` (March) |
-| `getDate()` | Day of month | `15` |
-| `day()` | Day of week (0=Sun) | `5` (Friday) |
-| `hour()` | Hour (0-23) | `14` |
-| `minute()` | Minute (0-59) | `30` |
-| `second()` | Second (0-59) | `45` |
-| `millisecond()` | Millisecond (0-999) | `123` |
-| `quarter()` | Quarter (1-4) | `1` |
-| `week()` | ISO week number | `11` |
-| `isoWeek()` | ISO week number | `11` |
-| `weekday()` | Locale-aware weekday | `5` |
-| `isoWeekday()` | ISO weekday (Mon=1) | `5` |
-| `dayOfYear()` | Day of year (1-366) | `75` |
-| `weekYear()` | ISO week year | `2024` |
+| Method          | Returns              | Example      |
+| --------------- | -------------------- | ------------ |
+| `year()`        | Full year            | `2024`       |
+| `month()`       | Month (0-indexed)    | `2` (March)  |
+| `getDate()`     | Day of month         | `15`         |
+| `day()`         | Day of week (0=Sun)  | `5` (Friday) |
+| `hour()`        | Hour (0-23)          | `14`         |
+| `minute()`      | Minute (0-59)        | `30`         |
+| `second()`      | Second (0-59)        | `45`         |
+| `millisecond()` | Millisecond (0-999)  | `123`        |
+| `quarter()`     | Quarter (1-4)        | `1`          |
+| `week()`        | ISO week number      | `11`         |
+| `isoWeek()`     | ISO week number      | `11`         |
+| `weekday()`     | Locale-aware weekday | `5`          |
+| `isoWeekday()`  | ISO weekday (Mon=1)  | `5`          |
+| `dayOfYear()`   | Day of year (1-366)  | `75`         |
+| `weekYear()`    | ISO week year        | `2024`       |
 
 ```typescript
 const date = new DateKit("2024-03-15T14:30:45.123Z");
@@ -352,24 +367,26 @@ All setters return a **new DateKit instance** (immutable):
 const date = new DateKit("2024-03-15T14:30:00Z");
 
 // Individual setters
-date.setYear(2025).toISOString();        // "2025-03-15T14:30:00.000Z"
-date.setMonth(11).toISOString();         // "2024-12-15T14:30:00.000Z"
-date.setDate(1).toISOString();           // "2024-03-01T14:30:00.000Z"
-date.setHour(9).toISOString();           // "2024-03-15T09:30:00.000Z"
-date.setMinute(0).toISOString();         // "2024-03-15T14:00:00.000Z"
-date.setSecond(0).toISOString();         // "2024-03-15T14:30:00.000Z"
-date.setMillisecond(500).toISOString();  // "2024-03-15T14:30:00.500Z"
-date.setQuarter(3).toISOString();        // "2024-09-15T14:30:00.000Z"
+date.setYear(2025).toISOString(); // "2025-03-15T14:30:00.000Z"
+date.setMonth(11).toISOString(); // "2024-12-15T14:30:00.000Z"
+date.setDate(1).toISOString(); // "2024-03-01T14:30:00.000Z"
+date.setHour(9).toISOString(); // "2024-03-15T09:30:00.000Z"
+date.setMinute(0).toISOString(); // "2024-03-15T14:00:00.000Z"
+date.setSecond(0).toISOString(); // "2024-03-15T14:30:00.000Z"
+date.setMillisecond(500).toISOString(); // "2024-03-15T14:30:00.500Z"
+date.setQuarter(3).toISOString(); // "2024-09-15T14:30:00.000Z"
 
 // Set multiple values at once
-date.set({ 
-  year: 2025, 
-  month: 0,      // January
-  date: 1, 
-  hour: 0,
-  minute: 0,
-  second: 0 
-}).format("YYYY-MM-DD HH:mm:ss");
+date
+  .set({
+    year: 2025,
+    month: 0, // January
+    date: 1,
+    hour: 0,
+    minute: 0,
+    second: 0,
+  })
+  .format("YYYY-MM-DD HH:mm:ss");
 // → "2025-01-01 00:00:00"
 ```
 
@@ -383,15 +400,15 @@ Add or subtract time with chainable operations:
 const date = new DateKit("2024-01-15T10:00:00Z");
 
 // Adding time
-date.add(5, "day").format("YYYY-MM-DD");    // "2024-01-20"
-date.add(2, "week").format("YYYY-MM-DD");   // "2024-01-29"
-date.add(3, "month").format("YYYY-MM-DD");  // "2024-04-15"
-date.add(1, "year").format("YYYY-MM-DD");   // "2025-01-15"
-date.add(90, "minute").format("HH:mm");     // "11:30"
+date.add(5, "day").format("YYYY-MM-DD"); // "2024-01-20"
+date.add(2, "week").format("YYYY-MM-DD"); // "2024-01-29"
+date.add(3, "month").format("YYYY-MM-DD"); // "2024-04-15"
+date.add(1, "year").format("YYYY-MM-DD"); // "2025-01-15"
+date.add(90, "minute").format("HH:mm"); // "11:30"
 
 // Subtracting time
 date.subtract(1, "month").format("YYYY-MM-DD"); // "2023-12-15"
-date.subtract(2, "hour").format("HH:mm");       // "08:00"
+date.subtract(2, "hour").format("HH:mm"); // "08:00"
 
 // Chaining (all operations are immutable!)
 const result = date
@@ -414,18 +431,18 @@ Snap to the boundaries of time units:
 const date = new DateKit("2024-03-15T14:30:45.123Z");
 
 // Start of...
-date.startOf("year").format("YYYY-MM-DD HH:mm:ss");    // "2024-01-01 00:00:00"
-date.startOf("quarter").format("YYYY-MM-DD");          // "2024-01-01"
-date.startOf("month").format("YYYY-MM-DD");            // "2024-03-01"
-date.startOf("week").format("YYYY-MM-DD");             // "2024-03-10" (Sunday)
-date.startOf("day").format("YYYY-MM-DD HH:mm:ss");     // "2024-03-15 00:00:00"
-date.startOf("hour").format("HH:mm:ss");               // "14:00:00"
+date.startOf("year").format("YYYY-MM-DD HH:mm:ss"); // "2024-01-01 00:00:00"
+date.startOf("quarter").format("YYYY-MM-DD"); // "2024-01-01"
+date.startOf("month").format("YYYY-MM-DD"); // "2024-03-01"
+date.startOf("week").format("YYYY-MM-DD"); // "2024-03-10" (Sunday)
+date.startOf("day").format("YYYY-MM-DD HH:mm:ss"); // "2024-03-15 00:00:00"
+date.startOf("hour").format("HH:mm:ss"); // "14:00:00"
 
 // End of...
-date.endOf("year").format("YYYY-MM-DD HH:mm:ss");      // "2024-12-31 23:59:59"
-date.endOf("month").format("YYYY-MM-DD");              // "2024-03-31"
-date.endOf("day").format("HH:mm:ss.SSS");              // "23:59:59.999"
-date.endOf("hour").format("HH:mm:ss.SSS");             // "14:59:59.999"
+date.endOf("year").format("YYYY-MM-DD HH:mm:ss"); // "2024-12-31 23:59:59"
+date.endOf("month").format("YYYY-MM-DD"); // "2024-03-31"
+date.endOf("day").format("HH:mm:ss.SSS"); // "23:59:59.999"
+date.endOf("hour").format("HH:mm:ss.SSS"); // "14:59:59.999"
 ```
 
 ---
@@ -440,24 +457,24 @@ const jan20 = new DateKit("2024-01-20");
 const feb15 = new DateKit("2024-02-15");
 
 // Basic comparisons
-jan15.isBefore(jan20);        // true
-jan20.isAfter(jan15);         // true
-jan15.isSame("2024-01-15");   // true
+jan15.isBefore(jan20); // true
+jan20.isAfter(jan15); // true
+jan15.isSame("2024-01-15"); // true
 
 // Compare by unit
 jan15.isSame(jan20, "month"); // true (both January)
-jan15.isSame(feb15, "year");  // true (both 2024)
+jan15.isSame(feb15, "year"); // true (both 2024)
 
 // Inclusive comparisons
-jan15.isSameOrBefore(jan20);  // true
-jan20.isSameOrAfter(jan15);   // true
+jan15.isSameOrBefore(jan20); // true
+jan20.isSameOrAfter(jan15); // true
 
 // Range check with inclusivity options
 const jan17 = new DateKit("2024-01-17");
-jan17.isBetween("2024-01-15", "2024-01-20");                    // true (exclusive)
-jan17.isBetween("2024-01-15", "2024-01-20", undefined, "[]");   // true (inclusive)
-jan15.isBetween("2024-01-15", "2024-01-20", undefined, "[)");   // true (start-inclusive)
-jan20.isBetween("2024-01-15", "2024-01-20", undefined, "(]");   // true (end-inclusive)
+jan17.isBetween("2024-01-15", "2024-01-20"); // true (exclusive)
+jan17.isBetween("2024-01-15", "2024-01-20", undefined, "[]"); // true (inclusive)
+jan15.isBetween("2024-01-15", "2024-01-20", undefined, "[)"); // true (start-inclusive)
+jan20.isBetween("2024-01-15", "2024-01-20", undefined, "(]"); // true (end-inclusive)
 ```
 
 ---
@@ -472,25 +489,25 @@ const saturday = new DateKit("2024-03-16"); // A Saturday
 const leapYear = new DateKit("2024-02-29");
 
 // Relative checks
-today.isToday();              // true
-today.add(1, "day").isTomorrow();    // true
+today.isToday(); // true
+today.add(1, "day").isTomorrow(); // true
 today.subtract(1, "day").isYesterday(); // true
 
 // Period checks
-today.isThisWeek();           // true
-today.isThisMonth();          // true
-today.isThisQuarter();        // true
-today.isThisYear();           // true
+today.isThisWeek(); // true
+today.isThisMonth(); // true
+today.isThisQuarter(); // true
+today.isThisYear(); // true
 
 // Day type checks
-saturday.isWeekend();         // true
-saturday.isWeekday();         // false
+saturday.isWeekend(); // true
+saturday.isWeekday(); // false
 
 // Year checks
-leapYear.isLeapYear();        // true (2024 is a leap year)
+leapYear.isLeapYear(); // true (2024 is a leap year)
 
 // DST check (environment-dependent)
-today.isDST();                // true/false based on current DST status
+today.isDST(); // true/false based on current DST status
 ```
 
 ---
@@ -504,22 +521,22 @@ const start = new DateKit("2024-01-01T00:00:00Z");
 const end = new DateKit("2024-03-15T14:30:00Z");
 
 // Basic differences (returns integers by default)
-end.diff(start, "day");         // 74
-end.diff(start, "week");        // 10
-end.diff(start, "month");       // 2
-end.diff(start, "hour");        // 1782
+end.diff(start, "day"); // 74
+end.diff(start, "week"); // 10
+end.diff(start, "month"); // 2
+end.diff(start, "hour"); // 1782
 
 // Precise differences (floating point)
-end.diff(start, "day", true);   // 74.604...
+end.diff(start, "day", true); // 74.604...
 end.diff(start, "month", true); // 2.467...
 
 // Negative differences (when comparing backwards)
-start.diff(end, "day");         // -74
+start.diff(end, "day"); // -74
 
 // Common use case: age calculation
 const birthdate = new DateKit("1990-05-15");
 const today = new DateKit("2024-03-15");
-today.diff(birthdate, "year");  // 33
+today.diff(birthdate, "year"); // 33
 ```
 
 ---
@@ -532,23 +549,23 @@ Human-friendly "time ago" / "time from now" strings:
 const now = DateKit.now();
 
 // From now (past)
-now.subtract(5, "second").fromNow();  // "a few seconds ago"
-now.subtract(3, "minute").fromNow();  // "3 minutes ago"
-now.subtract(2, "hour").fromNow();    // "2 hours ago"
-now.subtract(1, "day").fromNow();     // "a day ago"
-now.subtract(5, "day").fromNow();     // "5 days ago"
-now.subtract(1, "month").fromNow();   // "a month ago"
-now.subtract(2, "year").fromNow();    // "2 years ago"
+now.subtract(5, "second").fromNow(); // "a few seconds ago"
+now.subtract(3, "minute").fromNow(); // "3 minutes ago"
+now.subtract(2, "hour").fromNow(); // "2 hours ago"
+now.subtract(1, "day").fromNow(); // "a day ago"
+now.subtract(5, "day").fromNow(); // "5 days ago"
+now.subtract(1, "month").fromNow(); // "a month ago"
+now.subtract(2, "year").fromNow(); // "2 years ago"
 
 // To now (future)
-now.add(10, "minute").toNow();        // "in 10 minutes"
-now.add(3, "day").toNow();            // "in 3 days"
+now.add(10, "minute").toNow(); // "in 10 minutes"
+now.add(3, "day").toNow(); // "in 3 days"
 
 // Between specific dates
 const past = new DateKit("2024-01-01");
 const future = new DateKit("2024-12-31");
-past.from(future);                    // "in 12 months"
-future.to(past);                      // "12 months ago"
+past.from(future); // "in 12 months"
+future.to(past); // "12 months ago"
 
 // Without suffix
 now.subtract(5, "minute").fromNow(true); // "5 minutes"
@@ -563,16 +580,16 @@ Context-aware date descriptions:
 ```typescript
 const now = DateKit.now();
 
-now.calendar();                           // "Today at 2:30 PM"
-now.add(1, "day").calendar();             // "Tomorrow at 2:30 PM"
-now.subtract(1, "day").calendar();        // "Yesterday at 2:30 PM"
-now.add(3, "day").calendar();             // "Thursday at 2:30 PM"
-now.subtract(7, "day").calendar();        // "03/08/2024"
+now.calendar(); // "Today at 2:30 PM"
+now.add(1, "day").calendar(); // "Tomorrow at 2:30 PM"
+now.subtract(1, "day").calendar(); // "Yesterday at 2:30 PM"
+now.add(3, "day").calendar(); // "Thursday at 2:30 PM"
+now.subtract(7, "day").calendar(); // "03/08/2024"
 
 // With custom reference date
 const eventDate = new DateKit("2024-06-15T10:00:00Z");
 const currentDate = new DateKit("2024-06-14");
-eventDate.calendar(currentDate);          // "Tomorrow at 10:00 AM"
+eventDate.calendar(currentDate); // "Tomorrow at 10:00 AM"
 ```
 
 ---
@@ -585,18 +602,18 @@ Helpful methods for common operations:
 const date = new DateKit("2024-02-15");
 
 // Days in the current month
-date.daysInMonth();                    // 29 (February 2024, leap year)
+date.daysInMonth(); // 29 (February 2024, leap year)
 new DateKit("2023-02-15").daysInMonth(); // 28 (non-leap year)
 new DateKit("2024-01-15").daysInMonth(); // 31
 
 // Weeks in year (ISO)
-date.weeksInYear();                    // 52 (or 53 for some years)
+date.weeksInYear(); // 52 (or 53 for some years)
 
 // Age calculation
 const birthdate = new DateKit("1990-05-15");
-birthdate.age();                       // Current age in years
-birthdate.age("2024-05-14");           // 33 (day before birthday)
-birthdate.age("2024-05-15");           // 34 (on birthday)
+birthdate.age(); // Current age in years
+birthdate.age("2024-05-14"); // 33 (day before birthday)
+birthdate.age("2024-05-15"); // 34 (on birthday)
 
 // Clone (independent copy)
 const original = new DateKit("2024-03-15");
@@ -606,8 +623,8 @@ copy.add(1, "day"); // Doesn't affect original
 // Duration to another date
 const start = new DateKit("2024-01-01T08:00:00Z");
 const end = new DateKit("2024-01-01T17:30:00Z");
-start.duration(end).asHours();         // 9.5
-start.duration(end).humanize();        // "9 hours"
+start.duration(end).asHours(); // 9.5
+start.duration(end).humanize(); // "9 hours"
 ```
 
 ---
@@ -621,7 +638,7 @@ const friday = new DateKit("2024-03-15"); // Friday
 const monday = new DateKit("2024-03-18"); // Monday
 
 // Check if business day
-friday.isBusinessDay();               // true
+friday.isBusinessDay(); // true
 friday.add(1, "day").isBusinessDay(); // false (Saturday)
 
 // Add business days (skips weekends)
@@ -647,8 +664,8 @@ const holidays = [
 friday.addBusinessDays(1, holidays).format("YYYY-MM-DD dddd");
 // → "2024-03-19 Tuesday" (skipped the holiday)
 
-friday.isBusinessDay(holidays);         // true
-monday.isBusinessDay(holidays);         // false (it's a holiday)
+friday.isBusinessDay(holidays); // true
+monday.isBusinessDay(holidays); // false (it's a holiday)
 ```
 
 ---
@@ -668,7 +685,7 @@ const spanish = date.locale("es") as DateKit;
 spanish.format("dddd, D [de] MMMM [de] YYYY"); // "Viernes, 15 de Marzo de 2024"
 
 // Get current locale
-date.locale();    // "en"
+date.locale(); // "en"
 spanish.locale(); // "es"
 
 // Create with locale
@@ -676,9 +693,45 @@ const esDate = new DateKit("2024-03-15", { locale: "es" });
 esDate.format("MMMM"); // "Marzo"
 ```
 
-**Built-in locales:** `en` (English), `es` (Spanish)
+**Built-in locales:**
 
-> 💡 **Tip**: Use `registerLocale()` to add custom locales.
+| Code | Language             | Direction |
+| ---- | -------------------- | --------- |
+| `en` | English              | LTR       |
+| `es` | Spanish              | LTR       |
+| `fr` | French               | LTR       |
+| `de` | German               | LTR       |
+| `pt` | Portuguese           | LTR       |
+| `zh` | Chinese (Simplified) | LTR       |
+| `ja` | Japanese             | LTR       |
+| `ko` | Korean               | LTR       |
+| `ru` | Russian              | LTR       |
+| `hi` | Hindi                | LTR       |
+| `bn` | Bengali              | LTR       |
+| `ar` | Arabic               | **RTL**   |
+| `ur` | Urdu                 | **RTL**   |
+
+```typescript
+import { DateKit, registerLocale } from "@subrotosaha/datekit";
+import { ru } from "@subrotosaha/datekit/locales/ru";
+
+// All 13 locales are registered automatically
+new DateKit().locale("ja").fromNow(); // "数秒前"
+
+// Text direction is exposed via LocaleConfig.dir
+import { getLocale } from "@subrotosaha/datekit";
+getLocale("ar").dir; // "rtl"
+getLocale("en").dir; // "ltr"
+
+// Register a custom locale
+registerLocale({
+  name: "my-locale",
+  dir: "ltr",
+  // ... other fields
+});
+```
+
+> 💡 **Tip**: Use `registerLocale()` to add your own custom locale at runtime.
 
 ---
 
@@ -690,25 +743,25 @@ Generate arrays of dates for iteration:
 // Each day in a range
 const days = DateKit.eachDayOfInterval({
   start: "2024-03-01",
-  end: "2024-03-07"
+  end: "2024-03-07",
 });
-days.map(d => d.format("YYYY-MM-DD"));
+days.map((d) => d.format("YYYY-MM-DD"));
 // → ["2024-03-01", "2024-03-02", ..., "2024-03-07"]
 
 // Each week start
 const weeks = DateKit.eachWeekOfInterval({
   start: "2024-03-01",
-  end: "2024-03-31"
+  end: "2024-03-31",
 });
-weeks.map(d => d.format("YYYY-MM-DD")); 
+weeks.map((d) => d.format("YYYY-MM-DD"));
 // → ["2024-02-25", "2024-03-03", "2024-03-10", ...]
 
 // Each month start
 const months = DateKit.eachMonthOfInterval({
   start: "2024-01-01",
-  end: "2024-06-30"
+  end: "2024-06-30",
 });
-months.map(d => d.format("MMMM YYYY"));
+months.map((d) => d.format("MMMM YYYY"));
 // → ["January 2024", "February 2024", ..., "June 2024"]
 ```
 
@@ -720,16 +773,16 @@ Utility methods without instance creation:
 
 ```typescript
 // Current moment
-DateKit.now();                              // DateKit for current time
+DateKit.now(); // DateKit for current time
 
 // Create from specific inputs
-DateKit.utc("2024-03-15");                  // Parse as UTC
-DateKit.unix(1710513000);                   // From Unix seconds
+DateKit.utc("2024-03-15"); // Parse as UTC
+DateKit.unix(1710513000); // From Unix seconds
 
 // Validation
-DateKit.isValid("2024-03-15");              // true
-DateKit.isValid("invalid-date");            // false
-DateKit.isValid(new Date("invalid"));       // false
+DateKit.isValid("2024-03-15"); // true
+DateKit.isValid("invalid-date"); // false
+DateKit.isValid(new Date("invalid")); // false
 
 // Find extremes
 DateKit.max("2024-01-01", "2024-06-15", "2024-03-20").format("YYYY-MM-DD");
@@ -739,12 +792,158 @@ DateKit.min("2024-01-01", "2024-06-15", "2024-03-20").format("YYYY-MM-DD");
 // → "2024-01-01"
 
 // Duration factory
-DateKit.duration(2, "hours").asMinutes();   // 120
+DateKit.duration(2, "hours").asMinutes(); // 120
 DateKit.duration({ days: 1, hours: 12 }).asHours(); // 36
 
 // Type guard
 DateKit.isDuration(new Duration(5, "days")); // true
-DateKit.isDuration({});                      // false
+DateKit.isDuration({}); // false
+```
+
+---
+
+### Parse with Format
+
+Parse a string using a custom format pattern:
+
+```typescript
+// DateKit.parse(dateStr, formatStr, config?)
+DateKit.parse("25/03/2025", "DD/MM/YYYY").format("YYYY-MM-DD");
+// → "2025-03-25"
+
+DateKit.parse("March 25, 2025", "MMMM DD, YYYY").toISOString();
+// → "2025-03-25T00:00:00.000Z"
+
+DateKit.parse("2025-03-25 14:30", "YYYY-MM-DD HH:mm").format("h:mm A");
+// → "2:30 PM"
+
+// Supports AM/PM, 12-hour clock
+DateKit.parse("03/25/2025 02:30 PM", "MM/DD/YYYY hh:mm A");
+
+// Two-digit year (pivots at 2000 + current offset)
+DateKit.parse("25/12/99", "DD/MM/YY").year(); // 1999
+
+// Escape literal text with square brackets (same as format())
+DateKit.parse("Today is 2025-03-25", "[Today is] YYYY-MM-DD");
+```
+
+**Supported parse tokens:**
+
+| Token    | Description             |
+| -------- | ----------------------- |
+| `YYYY`   | 4-digit year            |
+| `YY`     | 2-digit year            |
+| `MM`     | 2-digit month (01-12)   |
+| `M`      | Month without padding   |
+| `DD`     | 2-digit day of month    |
+| `D`      | Day without padding     |
+| `HH`     | 24-hour hours (00-23)   |
+| `H`      | 24-hour without padding |
+| `hh`     | 12-hour hours (01-12)   |
+| `h`      | 12-hour without padding |
+| `mm`     | Minutes (00-59)         |
+| `m`      | Minutes without padding |
+| `ss`     | Seconds (00-59)         |
+| `s`      | Seconds without padding |
+| `SSS`    | Milliseconds            |
+| `A`      | AM/PM (uppercase)       |
+| `a`      | am/pm (lowercase)       |
+| `[text]` | Escaped literal text    |
+
+---
+
+## 📅 DateRange Class
+
+Represent an inclusive date range `[start, end]` with set operations.
+
+### Creating Date Ranges
+
+```typescript
+import { DateRange } from "@subrotosaha/datekit";
+
+// From any DateInput (ISO string, Date, timestamp, DateKit)
+const q1 = new DateRange("2025-01-01", "2025-03-31");
+const q2 = new DateRange("2025-04-01", "2025-06-30");
+
+// Start must not be after end — throws RangeError otherwise
+const range = new DateRange(
+  DateKit.now().startOf("year"),
+  DateKit.now().endOf("year")
+);
+
+console.log(range.start.format("YYYY-MM-DD")); // "2025-01-01"
+console.log(range.end.format("YYYY-MM-DD")); // "2025-12-31"
+```
+
+---
+
+### Range Predicates
+
+```typescript
+const range = new DateRange("2025-01-01", "2025-12-31");
+
+// Contains — inclusive on both ends
+range.contains("2025-06-15"); // true
+range.contains("2024-12-31"); // false
+range.contains("2026-01-01"); // false
+
+// Overlaps — true unless one ends strictly before the other starts
+const a = new DateRange("2025-01-01", "2025-06-30");
+const b = new DateRange("2025-04-01", "2025-12-31");
+const c = new DateRange("2026-01-01", "2026-12-31");
+
+a.overlaps(b); // true  (April–June overlap)
+a.overlaps(c); // false (no overlap)
+```
+
+---
+
+### Set Operations
+
+```typescript
+const a = new DateRange("2025-01-01", "2025-06-30");
+const b = new DateRange("2025-04-01", "2025-12-31");
+
+// Intersection — overlapping portion, or null
+const overlap = a.intersection(b);
+overlap?.start.format("YYYY-MM-DD"); // "2025-04-01"
+overlap?.end.format("YYYY-MM-DD"); // "2025-06-30"
+
+// Non-overlapping ranges
+const p = new DateRange("2025-01-01", "2025-03-31");
+const q = new DateRange("2025-07-01", "2025-12-31");
+p.intersection(q); // null
+
+// Union — smallest range covering both
+const all = a.union(b);
+all.start.format("YYYY-MM-DD"); // "2025-01-01"
+all.end.format("YYYY-MM-DD"); // "2025-12-31"
+```
+
+---
+
+### Range Metrics
+
+```typescript
+const q1 = new DateRange("2025-01-01", "2025-03-31");
+
+// Number of whole days
+q1.days(); // 89
+
+// Duration object (full precision)
+q1.duration().asHours(); // 2136
+q1.duration().humanize(); // "3 months"
+
+// Iterate — returns DateKit[] at a given step
+q1.toArray("week").map((d) => d.format("MMM D"));
+// → ["Jan 1", "Jan 8", "Jan 15", ...]
+
+q1.toArray("month").map((d) => d.format("MMMM"));
+// → ["January", "February", "March"]
+
+// Serialisation
+q1.toString(); // "[2025-01-01T00:00:00.000Z / 2025-03-31T00:00:00.000Z]"
+q1.toJSON(); // { start: "2025-01-01T00:00:00.000Z", end: "2025-03-31T00:00:00.000Z" }
 ```
 
 ---
@@ -768,7 +967,7 @@ const complex = new Duration({
   days: 2,
   hours: 5,
   minutes: 30,
-  seconds: 15
+  seconds: 15,
 });
 
 // From DateKit factory
@@ -793,15 +992,15 @@ Convert durations to different units:
 const duration = new Duration(90, "minutes");
 
 duration.asMilliseconds(); // 5400000
-duration.asSeconds();      // 5400
-duration.asMinutes();      // 90
-duration.asHours();        // 1.5
-duration.asDays();         // 0.0625
-duration.asWeeks();        // 0.00893...
+duration.asSeconds(); // 5400
+duration.asMinutes(); // 90
+duration.asHours(); // 1.5
+duration.asDays(); // 0.0625
+duration.asWeeks(); // 0.00893...
 
 // Approximate conversions
-duration.asMonths();       // ~0.00205 (using 30.44 days/month)
-duration.asYears();        // ~0.00017 (using 365.25 days/year)
+duration.asMonths(); // ~0.00205 (using 30.44 days/month)
+duration.asYears(); // ~0.00017 (using 365.25 days/year)
 
 // Get structured object
 const complex = new Duration({ days: 2, hours: 5, minutes: 30 });
@@ -816,14 +1015,14 @@ complex.toObject();
 Human-readable duration strings:
 
 ```typescript
-new Duration(30, "seconds").humanize();     // "a few seconds"
-new Duration(1, "minutes").humanize();      // "a minute"
-new Duration(45, "minutes").humanize();     // "an hour"
-new Duration(5, "hours").humanize();        // "5 hours"
-new Duration(24, "hours").humanize();       // "a day"
-new Duration(35, "days").humanize();        // "a month"
-new Duration(400, "days").humanize();       // "a year"
-new Duration(3, "years").humanize();        // "3 years"
+new Duration(30, "seconds").humanize(); // "a few seconds"
+new Duration(1, "minutes").humanize(); // "a minute"
+new Duration(45, "minutes").humanize(); // "an hour"
+new Duration(5, "hours").humanize(); // "5 hours"
+new Duration(24, "hours").humanize(); // "a day"
+new Duration(35, "days").humanize(); // "a month"
+new Duration(400, "days").humanize(); // "a year"
+new Duration(3, "years").humanize(); // "3 years"
 ```
 
 ---
@@ -837,7 +1036,7 @@ const hour = new Duration(1, "hours");
 const halfHour = new Duration(30, "minutes");
 
 // Addition
-hour.add(halfHour).asMinutes();    // 90
+hour.add(halfHour).asMinutes(); // 90
 
 // Subtraction
 hour.subtract(halfHour).asMinutes(); // 30
@@ -855,69 +1054,71 @@ new Duration(2, "hours")
 
 Transform DateKit instances:
 
-| Method | Returns | Description |
-|--------|---------|-------------|
-| `toDate()` | `Date` | Native Date object (copy) |
-| `toISOString()` | `string` | ISO 8601 format |
-| `toUnix()` | `number` | Unix timestamp (seconds) |
-| `valueOf()` | `number` | Unix timestamp (milliseconds) |
-| `toArray()` | `number[]` | `[year, month, date, hour, min, sec, ms]` |
-| `toObject()` | `object` | Structured date components |
-| `toJSON()` | `string` | ISO string (for serialization) |
-| `toString()` | `string` | Native Date string |
+| Method          | Returns    | Description                               |
+| --------------- | ---------- | ----------------------------------------- |
+| `toDate()`      | `Date`     | Native Date object (copy)                 |
+| `toISOString()` | `string`   | ISO 8601 format                           |
+| `toUnix()`      | `number`   | Unix timestamp (seconds)                  |
+| `valueOf()`     | `number`   | Unix timestamp (milliseconds)             |
+| `toArray()`     | `number[]` | `[year, month, date, hour, min, sec, ms]` |
+| `toObject()`    | `object`   | Structured date components                |
+| `toJSON()`      | `string`   | ISO string (for serialization)            |
+| `toString()`    | `string`   | Native Date string                        |
 
 ```typescript
 const date = new DateKit("2024-03-15T14:30:45.123Z");
 
-date.toDate();       // Date object
-date.toISOString();  // "2024-03-15T14:30:45.123Z"
-date.toUnix();       // 1710513045
-date.valueOf();      // 1710513045123
-date.toArray();      // [2024, 2, 15, 14, 30, 45, 123]
-date.toObject();     // { year: 2024, month: 2, date: 15, ... }
+date.toDate(); // Date object
+date.toISOString(); // "2024-03-15T14:30:45.123Z"
+date.toUnix(); // 1710513045
+date.valueOf(); // 1710513045123
+date.toArray(); // [2024, 2, 15, 14, 30, 45, 123]
+date.toObject(); // { year: 2024, month: 2, date: 15, ... }
 ```
 
 ---
 
 ## 📋 Format Tokens Reference
 
-| Category | Token | Output | Example |
-|----------|-------|--------|---------|
-| **Year** | `YYYY` | 4-digit year | `2024` |
-| | `YY` | 2-digit year | `24` |
-| **Quarter** | `Q` | Quarter number | `1` - `4` |
-| | `Qo` | Quarter ordinal | `1st`, `2nd` |
-| **Month** | `MMMM` | Full name | `March` |
-| | `MMM` | Short name | `Mar` |
-| | `MM` | 2-digit | `03` |
-| | `M` | Number | `3` |
-| | `Mo` | Ordinal | `3rd` |
-| **Week** | `W` / `WW` | ISO week | `11` / `11` |
-| | `Wo` | Week ordinal | `11th` |
-| **Day of Year** | `DDD` | Day number | `75` |
-| | `DDDD` | Padded | `075` |
-| | `DDDo` | Ordinal | `75th` |
-| **Day of Month** | `DD` | 2-digit | `15` |
-| | `D` | Number | `15` |
-| | `Do` | Ordinal | `15th` |
-| **Day of Week** | `dddd` | Full name | `Friday` |
-| | `ddd` | Short name | `Fri` |
-| | `dd` | Min name | `Fr` |
-| | `d` | Number (Sun=0) | `5` |
-| | `do` | Ordinal | `5th` |
-| **Hour** | `HH` / `H` | 24-hour | `14` / `14` |
-| | `hh` / `h` | 12-hour | `02` / `2` |
-| **Minute** | `mm` / `m` | Minutes | `30` / `30` |
-| **Second** | `ss` / `s` | Seconds | `45` / `45` |
-| **Millisecond** | `SSS` | 3-digit | `123` |
-| | `SS` | 2-digit | `12` |
-| | `S` | 1-digit | `1` |
-| **AM/PM** | `A` | Uppercase | `PM` |
-| | `a` | Lowercase | `pm` |
-| **Timezone** | `Z` | With colon | `+00:00` |
-| | `ZZ` | Compact | `+0000` |
-| **Unix** | `X` | Seconds | `1710513045` |
-| | `x` | Milliseconds | `1710513045123` |
+| Category          | Token      | Output              | Example         |
+| ----------------- | ---------- | ------------------- | --------------- |
+| **Year**          | `YYYY`     | 4-digit year        | `2024`          |
+|                   | `YY`       | 2-digit year        | `24`            |
+| **Quarter**       | `Q`        | Quarter number      | `1` - `4`       |
+|                   | `Qo`       | Quarter ordinal     | `1st`, `2nd`    |
+| **Month**         | `MMMM`     | Full name           | `March`         |
+|                   | `MMM`      | Short name          | `Mar`           |
+|                   | `MM`       | 2-digit             | `03`            |
+|                   | `M`        | Number              | `3`             |
+|                   | `Mo`       | Ordinal             | `3rd`           |
+| **Week (ISO)**    | `W` / `WW` | ISO week number     | `11` / `11`     |
+|                   | `Wo`       | ISO week ordinal    | `11th`          |
+| **Week (locale)** | `w` / `ww` | Locale week number  | `11` / `11`     |
+|                   | `wo`       | Locale week ordinal | `11th`          |
+| **Day of Year**   | `DDD`      | Day number          | `75`            |
+|                   | `DDDD`     | Padded              | `075`           |
+|                   | `DDDo`     | Ordinal             | `75th`          |
+| **Day of Month**  | `DD`       | 2-digit             | `15`            |
+|                   | `D`        | Number              | `15`            |
+|                   | `Do`       | Ordinal             | `15th`          |
+| **Day of Week**   | `dddd`     | Full name           | `Friday`        |
+|                   | `ddd`      | Short name          | `Fri`           |
+|                   | `dd`       | Min name            | `Fr`            |
+|                   | `d`        | Number (Sun=0)      | `5`             |
+|                   | `do`       | Ordinal             | `5th`           |
+| **Hour**          | `HH` / `H` | 24-hour             | `14` / `14`     |
+|                   | `hh` / `h` | 12-hour             | `02` / `2`      |
+| **Minute**        | `mm` / `m` | Minutes             | `30` / `30`     |
+| **Second**        | `ss` / `s` | Seconds             | `45` / `45`     |
+| **Millisecond**   | `SSS`      | 3-digit             | `123`           |
+|                   | `SS`       | 2-digit             | `12`            |
+|                   | `S`        | 1-digit             | `1`             |
+| **AM/PM**         | `A`        | Uppercase           | `PM`            |
+|                   | `a`        | Lowercase           | `pm`            |
+| **Timezone**      | `Z`        | With colon          | `+00:00`        |
+|                   | `ZZ`       | Compact             | `+0000`         |
+| **Unix**          | `X`        | Seconds             | `1710513045`    |
+|                   | `x`        | Milliseconds        | `1710513045123` |
 
 ---
 
@@ -937,6 +1138,8 @@ import type {
   QuarterNumber,
   DayOfWeek,
 } from "@subrotosaha/datekit";
+
+import { DateRange } from "@subrotosaha/datekit";
 ```
 
 <details>
@@ -948,8 +1151,15 @@ type DateInput = Date | string | number;
 
 // Time manipulation units
 type TimeUnit =
-  | "millisecond" | "second" | "minute" | "hour"
-  | "day" | "week" | "month" | "quarter" | "year";
+  | "millisecond"
+  | "second"
+  | "minute"
+  | "hour"
+  | "day"
+  | "week"
+  | "month"
+  | "quarter"
+  | "year";
 
 // Days of the week (0 = Sunday)
 type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -959,16 +1169,16 @@ type QuarterNumber = 1 | 2 | 3 | 4;
 
 // Configuration options
 interface DateKitConfig {
-  locale?: string;              // Locale code (e.g., "en", "es")
-  weekStartsOn?: DayOfWeek;     // First day of week
-  timezone?: string;            // IANA timezone
-  strictParsing?: boolean;      // Strict date parsing
+  locale?: string; // Locale code (e.g., "en", "es")
+  weekStartsOn?: DayOfWeek; // First day of week
+  timezone?: string; // IANA timezone
+  strictParsing?: boolean; // Strict date parsing
 }
 
 // For set() method
 interface SetDateValues {
   year?: number;
-  month?: number;       // 0-indexed
+  month?: number; // 0-indexed
   date?: number;
   hour?: number;
   minute?: number;
@@ -997,14 +1207,36 @@ interface DurationObject {
 // Locale configuration
 interface LocaleConfig {
   name: string;
+  dir?: "ltr" | "rtl"; // Text direction (RTL for ar, ur)
   weekdays: string[];
   weekdaysShort: string[];
   weekdaysMin: string[];
   months: string[];
   monthsShort: string[];
   ordinal: (n: number) => string;
-  relativeTime: { /* ... */ };
-  calendar: { /* ... */ };
+  relativeTime: {
+    future: string; // e.g. "in %s"
+    past: string; // e.g. "%s ago"
+    s: string; // seconds
+    m: string; // a minute
+    mm: string | ((n: number) => string); // N minutes (supports plural functions)
+    h: string; // an hour
+    hh: string | ((n: number) => string); // N hours
+    d: string; // a day
+    dd: string | ((n: number) => string); // N days
+    M: string; // a month
+    MM: string | ((n: number) => string); // N months
+    y: string; // a year
+    yy: string | ((n: number) => string); // N years
+  };
+  calendar: {
+    sameDay: string; // "[Today at] LT"
+    nextDay: string; // "[Tomorrow at] LT"
+    nextWeek: string; // "dddd [at] LT"
+    lastDay: string; // "[Yesterday at] LT"
+    lastWeek: string; // "[Last] dddd [at] LT"
+    sameElse: string; // "L" (fallback format)
+  };
 }
 ```
 
@@ -1029,12 +1261,7 @@ const timezones = [
 
 console.log("Meeting scheduled for 2 PM Dhaka time:");
 timezones.forEach(({ city, tz }) => {
-  const time = DateKit.convertTimezone(
-    meetingTime,
-    "Asia/Dhaka",
-    tz,
-    "h:mm A"
-  );
+  const time = DateKit.convertTimezone(meetingTime, "Asia/Dhaka", tz, "h:mm A");
   console.log(`  ${city}: ${time}`);
 });
 ```
@@ -1046,13 +1273,14 @@ function getWeekDates(date: DateKit) {
   const start = date.startOf("week");
   return DateKit.eachDayOfInterval({
     start: start.toISOString(),
-    end: start.add(6, "day").toISOString()
+    end: start.add(6, "day").toISOString(),
   });
 }
 
 const thisWeek = getWeekDates(DateKit.now());
-thisWeek.forEach(day => {
-  console.log(day.format("ddd, MMM D"), 
+thisWeek.forEach((day) => {
+  console.log(
+    day.format("ddd, MMM D"),
     day.isToday() ? "(today)" : "",
     day.isWeekend() ? "🌴" : ""
   );
@@ -1070,7 +1298,10 @@ function getNextBusinessDay(date: DateKit): DateKit {
   return next;
 }
 
-function calculateDeliveryDate(orderDate: DateKit, businessDays: number): DateKit {
+function calculateDeliveryDate(
+  orderDate: DateKit,
+  businessDays: number
+): DateKit {
   return orderDate.addBusinessDays(businessDays);
 }
 
@@ -1079,7 +1310,9 @@ const delivery = calculateDeliveryDate(order, 5);
 
 console.log(`Ordered: ${order.format("dddd, MMMM D")}`);
 console.log(`Estimated Delivery: ${delivery.format("dddd, MMMM D")}`);
-console.log(`(${order.businessDaysUntil(delivery.toISOString())} business days)`);
+console.log(
+  `(${order.businessDaysUntil(delivery.toISOString())} business days)`
+);
 ```
 
 ### Age Calculator
@@ -1089,18 +1322,20 @@ function formatAge(birthdate: DateKit): string {
   const years = birthdate.age();
   const months = DateKit.now().diff(birthdate.add(years, "year"), "month");
   const days = DateKit.now().diff(
-    birthdate.add(years, "year").add(months, "month"), 
+    birthdate.add(years, "year").add(months, "month"),
     "day"
   );
-  
+
   return `${years} years, ${months} months, ${days} days`;
 }
 
 const birthday = new DateKit("1990-05-15");
 console.log(`Age: ${formatAge(birthday)}`);
-console.log(`Days until next birthday: ${
-  birthday.setYear(DateKit.now().year() + 1).diff(DateKit.now(), "day")
-}`);
+console.log(
+  `Days until next birthday: ${birthday
+    .setYear(DateKit.now().year() + 1)
+    .diff(DateKit.now(), "day")}`
+);
 ```
 
 ---
@@ -1130,8 +1365,8 @@ All "mutating" methods return new instances:
 const original = new DateKit("2024-03-15");
 const modified = original.add(1, "day");
 
-original.format("YYYY-MM-DD");  // "2024-03-15" (unchanged!)
-modified.format("YYYY-MM-DD");  // "2024-03-16"
+original.format("YYYY-MM-DD"); // "2024-03-15" (unchanged!)
+modified.format("YYYY-MM-DD"); // "2024-03-16"
 ```
 
 ### Month Overflow

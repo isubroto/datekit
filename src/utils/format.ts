@@ -48,10 +48,16 @@ export function formatDate(
     MM: (month + 1).toString().padStart(2, "0"),
     M: (month + 1).toString(),
 
-    // Week
+    // ISO Week (Monday-start)
     Wo: localeConfig.ordinal(isoWeek),
     WW: isoWeek.toString().padStart(2, "0"),
     W: isoWeek.toString(),
+
+    // Locale week (w/wo/ww) — uses same ISO algorithm; for locale-specific
+    // week start, use DateKit.format() which has access to weekStartsOn config
+    wo: localeConfig.ordinal(isoWeek),
+    ww: isoWeek.toString().padStart(2, "0"),
+    w: isoWeek.toString(),
 
     // Day of Year
     DDDo: localeConfig.ordinal(dayOfYear),
@@ -104,13 +110,25 @@ export function formatDate(
 
   let result = formatStr;
 
+  // Step 0: Extract escaped literal segments [...] before any token replacement.
+  // e.g. "DD [days] MM" → "DD \x020\x02 MM", literals=["days"]
+  const escapedLiterals: string[] = [];
+  result = result.replace(/\[([^\]]*?)\]/g, (_, literal: string) => {
+    const key = `\x02${escapedLiterals.length}\x02`;
+    escapedLiterals.push(literal);
+    return key;
+  });
+
   // Sort tokens by length (descending) to replace longer tokens first
   const sortedTokens = Object.keys(tokens).sort((a, b) => b.length - a.length);
 
-  // First pass: Replace tokens with unique placeholders
+  // First pass: Replace tokens with unique placeholders.
+  // Token strings are escaped before building the RegExp so characters like
+  // '+' or '.' that appear in future tokens never break the pattern.
   sortedTokens.forEach((token, index) => {
     const placeholder = `\x00${index}\x00`; // Use null character as delimiter
-    const regex = new RegExp(token, "g");
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "g");
     result = result.replace(regex, placeholder);
     placeholders.set(placeholder, tokens[token]);
   });
@@ -118,6 +136,11 @@ export function formatDate(
   // Second pass: Replace placeholders with actual values
   placeholders.forEach((value, placeholder) => {
     result = result.replace(new RegExp(placeholder, "g"), value);
+  });
+
+  // Final pass: Restore escaped literal text
+  escapedLiterals.forEach((literal, index) => {
+    result = result.split(`\x02${index}\x02`).join(literal);
   });
 
   return result;

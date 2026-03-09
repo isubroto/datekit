@@ -1,4 +1,11 @@
 import { DurationObject } from "./types";
+import { formatRelativeTime } from "./utils/relative";
+
+// Shared integer constants — exact values, no floating-point drift.
+// 365.25 days/year × 86 400 000 ms/day  = 31 557 600 000 (exact integer)
+// 365.25 / 12 days/month × 86 400 000 ms/day = 2 629 800 000 (exact integer)
+const AVG_MS_PER_YEAR = 31_557_600_000;
+const AVG_MS_PER_MONTH = 2_629_800_000;
 
 export class Duration {
   private _milliseconds: number;
@@ -25,8 +32,8 @@ export class Duration {
 
   private objectToMilliseconds(obj: DurationObject): number {
     let ms = 0;
-    if (obj.years) ms += obj.years * 365.25 * 86400000;
-    if (obj.months) ms += obj.months * 30.44 * 86400000;
+    if (obj.years) ms += obj.years * AVG_MS_PER_YEAR;
+    if (obj.months) ms += obj.months * AVG_MS_PER_MONTH;
     if (obj.weeks) ms += obj.weeks * 604800000;
     if (obj.days) ms += obj.days * 86400000;
     if (obj.hours) ms += obj.hours * 3600000;
@@ -61,42 +68,33 @@ export class Duration {
   }
 
   asMonths(): number {
-    return this._milliseconds / (30.44 * 86400000);
+    return this._milliseconds / AVG_MS_PER_MONTH;
   }
 
   asYears(): number {
-    return this._milliseconds / (365.25 * 86400000);
+    return this._milliseconds / AVG_MS_PER_YEAR;
   }
 
-  humanize(locale: string = "en"): string {
-    const seconds = Math.abs(this.asSeconds());
-    const minutes = Math.abs(this.asMinutes());
-    const hours = Math.abs(this.asHours());
-    const days = Math.abs(this.asDays());
-    const months = Math.abs(this.asMonths());
-    const years = Math.abs(this.asYears());
-
-    if (seconds < 45) return "a few seconds";
-    if (seconds < 90) return "a minute";
-    if (minutes < 45) return `${Math.round(minutes)} minutes`;
-    if (minutes < 90) return "an hour";
-    if (hours < 22) return `${Math.round(hours)} hours`;
-    if (hours < 36) return "a day";
-    if (days < 25) return `${Math.round(days)} days`;
-    if (days < 45) return "a month";
-    if (days < 345) return `${Math.round(months)} months`;
-    if (years < 1.5) return "a year";
-    return `${Math.round(years)} years`;
+  /**
+   * Returns a human-readable representation of this duration in the given locale.
+   * Delegates to the same locale-aware formatRelativeTime() used by fromNow()/toNow(),
+   * so all registered locales work automatically.
+   * Pass withoutSuffix=true to get "5 minutes" instead of "in 5 minutes" / "5 minutes ago".
+   */
+  humanize(locale: string = "en", withoutSuffix: boolean = true): string {
+    return formatRelativeTime(this._milliseconds, locale, withoutSuffix);
   }
 
   toObject(): DurationObject {
+    // Use integer constants throughout so each subtraction is exact
+    // and no floating-point drift accumulates across the decomposition.
     let remaining = Math.abs(this._milliseconds);
 
-    const years = Math.floor(remaining / (365.25 * 86400000));
-    remaining -= years * 365.25 * 86400000;
+    const years = Math.floor(remaining / AVG_MS_PER_YEAR);
+    remaining -= years * AVG_MS_PER_YEAR;
 
-    const months = Math.floor(remaining / (30.44 * 86400000));
-    remaining -= months * 30.44 * 86400000;
+    const months = Math.floor(remaining / AVG_MS_PER_MONTH);
+    remaining -= months * AVG_MS_PER_MONTH;
 
     const days = Math.floor(remaining / 86400000);
     remaining -= days * 86400000;

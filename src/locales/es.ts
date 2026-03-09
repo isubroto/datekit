@@ -2,6 +2,7 @@ import { LocaleConfig } from "../types";
 
 export const es: LocaleConfig = {
   name: "es",
+  dir: "ltr",
   weekdays: [
     "Domingo",
     "Lunes",

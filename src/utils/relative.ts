@@ -1,5 +1,14 @@
 import { getLocale } from "../locales";
 
+/** Resolves a relativeTime entry that may be a string template or a function. */
+function resolveRelativeEntry(
+  entry: string | ((n: number) => string),
+  n: number
+): string {
+  if (typeof entry === "function") return entry(n);
+  return entry.replace("%d", String(n));
+}
+
 export function formatRelativeTime(
   milliseconds: number,
   locale: string = "en",
@@ -23,37 +32,37 @@ export function formatRelativeTime(
   } else if (seconds < 90) {
     result = localeConfig.relativeTime.m;
   } else if (minutes < 45) {
-    result = localeConfig.relativeTime.mm.replace(
-      "%d",
-      Math.round(minutes).toString()
+    result = resolveRelativeEntry(
+      localeConfig.relativeTime.mm,
+      Math.round(minutes)
     );
   } else if (minutes < 90) {
     result = localeConfig.relativeTime.h;
   } else if (hours < 22) {
-    result = localeConfig.relativeTime.hh.replace(
-      "%d",
-      Math.round(hours).toString()
+    result = resolveRelativeEntry(
+      localeConfig.relativeTime.hh,
+      Math.round(hours)
     );
   } else if (hours < 36) {
     result = localeConfig.relativeTime.d;
   } else if (days < 25) {
-    result = localeConfig.relativeTime.dd.replace(
-      "%d",
-      Math.round(days).toString()
+    result = resolveRelativeEntry(
+      localeConfig.relativeTime.dd,
+      Math.round(days)
     );
   } else if (days < 45) {
     result = localeConfig.relativeTime.M;
   } else if (days < 345) {
-    result = localeConfig.relativeTime.MM.replace(
-      "%d",
-      Math.round(months).toString()
+    result = resolveRelativeEntry(
+      localeConfig.relativeTime.MM,
+      Math.round(months)
     );
   } else if (years < 1.5) {
     result = localeConfig.relativeTime.y;
   } else {
-    result = localeConfig.relativeTime.yy.replace(
-      "%d",
-      Math.round(years).toString()
+    result = resolveRelativeEntry(
+      localeConfig.relativeTime.yy,
+      Math.round(years)
     );
   }
 

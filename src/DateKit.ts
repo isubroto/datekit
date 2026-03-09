@@ -8,7 +8,7 @@ import {
   QuarterNumber,
 } from "./types";
 import { formatDate } from "./utils/format";
-import { parseDate } from "./utils/parse";
+import { parseDate, parseDateFromFormat } from "./utils/parse";
 import { isValidDate } from "./utils/validators";
 import { formatRelativeTime } from "./utils/relative";
 import { formatCalendar } from "./utils/calendar";
@@ -17,6 +17,7 @@ import {
   addBusinessDays as addBizDays,
   businessDaysBetween,
 } from "./utils/businessDays";
+import { tzOffsetMs } from "./utils/timezone";
 import { Duration } from "./Duration";
 import { getLocale } from "./locales";
 
@@ -32,7 +33,7 @@ export class DateKit {
       ...config,
     };
 
-    this.date = date ? parseDate(date) : new Date();
+    this.date = date ? parseDate(date, this.config.strictParsing) : new Date();
 
     if (!isValidDate(this.date)) {
       throw new Error("Invalid date provided");
@@ -134,7 +135,7 @@ export class DateKit {
     if (dateInput instanceof Date) {
       parsedDate = dateInput;
       dateString = dateInput.toString();
-    } else if (typeof dateInput === 'number') {
+    } else if (typeof dateInput === "number") {
       parsedDate = new Date(dateInput);
       dateString = parsedDate.toString();
     } else {
@@ -225,7 +226,7 @@ export class DateKit {
     if (input instanceof Date) {
       parsed = input;
       inputString = input.toString();
-    } else if (typeof input === 'number') {
+    } else if (typeof input === "number") {
       parsed = new Date(input);
       inputString = parsed.toString();
     } else {
@@ -275,7 +276,10 @@ export class DateKit {
    * dk.formatZonedDate(new Date("2025-08-31T00:00:00+06:00"), "DD-MM-YYYY")
    * // Returns: "31-08-2025"
    */
-  formatZonedDate(input: DateInput, outputFormat: string = "DD-MM-YYYY"): string {
+  formatZonedDate(
+    input: DateInput,
+    outputFormat: string = "DD-MM-YYYY"
+  ): string {
     const locale = this.config?.locale ?? "en";
     return DateKit.formatZonedDate(input, outputFormat, locale);
   }
@@ -345,26 +349,21 @@ export class DateKit {
       const localDateString = `${year}-${month
         .toString()
         .padStart(2, "0")}-${day.toString().padStart(2, "0")}T${hour
-          .toString()
-          .padStart(2, "0")}:${minute.toString().padStart(2, "0")}:${second
-            .toString()
-            .padStart(2, "0")}`;
+        .toString()
+        .padStart(2, "0")}:${minute.toString().padStart(2, "0")}:${second
+        .toString()
+        .padStart(2, "0")}`;
 
-      // Get UTC timestamp for this local time in fromTimezone
-      const utcDate = new Date(
+      // Find the true UTC instant for this wall-clock time in fromTimezone.
+      // Uses DST-safe tzOffsetMs (Intl-based) with one refinement iteration.
+      const naiveUtc = new Date(
         Date.UTC(year, month - 1, day, hour, minute, second)
       );
-      const fromTzDate = new Date(
-        utcDate.toLocaleString("en-US", { timeZone: fromTimezone })
-      );
-      const utcCheck = new Date(
-        utcDate.toLocaleString("en-US", { timeZone: "UTC" })
-      );
-      const offset = fromTzDate.getTime() - utcCheck.getTime();
-      const actualUtcTime = utcDate.getTime() - offset;
+      let utcMs = naiveUtc.getTime() - tzOffsetMs(naiveUtc, fromTimezone);
+      utcMs = naiveUtc.getTime() - tzOffsetMs(new Date(utcMs), fromTimezone);
 
       // Now convert this UTC time to the target timezone
-      const targetDate = new Date(actualUtcTime);
+      const targetDate = new Date(utcMs);
       return DateKit.formatInTimezone(targetDate, toTimezone, formatStr);
     } else {
       // If date has timezone info or is a Date object, just format it in target timezone
@@ -459,8 +458,8 @@ export class DateKit {
     const dateString = `${year}-${month.toString().padStart(2, "0")}-${day
       .toString()
       .padStart(2, "0")}T${hour.toString().padStart(2, "0")}:${minute
-        .toString()
-        .padStart(2, "0")}:${second.toString().padStart(2, "0")}`;
+      .toString()
+      .padStart(2, "0")}:${second.toString().padStart(2, "0")}`;
 
     // Parse it as if it's in the specified timezone
     const formatter = new Intl.DateTimeFormat("en-US", {
@@ -474,28 +473,16 @@ export class DateKit {
       hour12: false,
     });
 
-    // Create a temporary date to get the offset
-    const tempDate = new Date(dateString);
-
-    // Get UTC representation
-    const utcDate = new Date(
+    // Find the true UTC instant for these wall-clock components in the given
+    // timezone using the DST-safe tzOffsetMs helper (Intl-based).
+    const naiveUtc = new Date(
       Date.UTC(year, month - 1, day, hour, minute, second)
     );
+    let utcMs = naiveUtc.getTime() - tzOffsetMs(naiveUtc, timezone);
+    // One refinement step resolves DST ambiguity
+    utcMs = naiveUtc.getTime() - tzOffsetMs(new Date(utcMs), timezone);
 
-    // Get the offset for this timezone at this date
-    const tzDate = new Date(
-      utcDate.toLocaleString("en-US", { timeZone: timezone })
-    );
-    const utcDateCheck = new Date(
-      utcDate.toLocaleString("en-US", { timeZone: "UTC" })
-    );
-
-    const offset = tzDate.getTime() - utcDateCheck.getTime();
-
-    // Adjust the UTC date by the offset to get the actual UTC time
-    const actualUtcTime = utcDate.getTime() - offset;
-
-    return new DateKit(actualUtcTime);
+    return new DateKit(utcMs);
   }
 
   /**
@@ -510,11 +497,8 @@ export class DateKit {
    * DateKit.getTimezoneOffset("America/New_York"); // Returns -300 or -240 depending on DST
    */
   static getTimezoneOffset(timezone: string, date: Date = new Date()): number {
-    const utcDate = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
-    const tzDate = new Date(
-      date.toLocaleString("en-US", { timeZone: timezone })
-    );
-    return (tzDate.getTime() - utcDate.getTime()) / 60000; // in minutes
+    // Delegate to the DST-safe tzOffsetMs helper in utils/timezone
+    return tzOffsetMs(date, timezone) / 60000;
   }
 
   // ============================================
@@ -697,24 +681,24 @@ export class DateKit {
 
     switch (unit) {
       case "year":
-        newDate.setUTCMonth(0);
-      case "quarter":
-        if (unit === "quarter") {
-          const currentQuarter = this.quarter();
-          newDate.setUTCMonth((currentQuarter - 1) * 3);
-        }
-      case "month":
-        newDate.setUTCDate(1);
-      case "day":
-        newDate.setUTCHours(0);
-      case "hour":
-        newDate.setUTCMinutes(0);
-      case "minute":
-        newDate.setUTCSeconds(0);
-      case "second":
-        newDate.setUTCMilliseconds(0);
+        // January 1st, 00:00:00.000
+        newDate.setUTCMonth(0, 1);
+        newDate.setUTCHours(0, 0, 0, 0);
         break;
-      case "week":
+      case "quarter": {
+        // First day of the current quarter, 00:00:00.000
+        const currentQuarter = this.quarter();
+        newDate.setUTCMonth((currentQuarter - 1) * 3, 1);
+        newDate.setUTCHours(0, 0, 0, 0);
+        break;
+      }
+      case "month":
+        // First day of the month, 00:00:00.000
+        newDate.setUTCDate(1);
+        newDate.setUTCHours(0, 0, 0, 0);
+        break;
+      case "week": {
+        // First day of the week (respects weekStartsOn), 00:00:00.000
         const day = newDate.getUTCDay();
         const diff =
           (day < this.config.weekStartsOn! ? 7 : 0) +
@@ -722,6 +706,23 @@ export class DateKit {
           this.config.weekStartsOn!;
         newDate.setUTCDate(newDate.getUTCDate() - diff);
         newDate.setUTCHours(0, 0, 0, 0);
+        break;
+      }
+      case "day":
+        // Start of day: 00:00:00.000
+        newDate.setUTCHours(0, 0, 0, 0);
+        break;
+      case "hour":
+        // Zero out minutes, seconds, ms
+        newDate.setUTCMinutes(0, 0, 0);
+        break;
+      case "minute":
+        // Zero out seconds and ms
+        newDate.setUTCSeconds(0, 0);
+        break;
+      case "second":
+        // Zero out ms
+        newDate.setUTCMilliseconds(0);
         break;
     }
 
@@ -844,8 +845,9 @@ export class DateKit {
   }
 
   isDST(): boolean {
-    const jan = new Date(this.year(), 0, 1);
-    const jul = new Date(this.year(), 6, 1);
+    // Use Date.UTC to stay consistent with the rest of the UTC-based API
+    const jan = new Date(Date.UTC(this.year(), 0, 1));
+    const jul = new Date(Date.UTC(this.year(), 6, 1));
     const stdOffset = Math.max(
       jan.getTimezoneOffset(),
       jul.getTimezoneOffset()
@@ -968,17 +970,22 @@ export class DateKit {
   }
 
   weeksInYear(): number {
-    const lastDayOfYear = new Date(Date.UTC(this.year(), 11, 31));
-    const lastWeek = new DateKit(lastDayOfYear);
-    const week = lastWeek.isoWeek();
-
-    // If week is 1, the year has 52 weeks
-    return week === 1 ? 52 : week;
+    // ISO 8601: Dec 28 is always in the last week of its year.
+    // Using Dec 31 could misreport years where Dec 31 falls in week 1.
+    const dec28 = new Date(Date.UTC(this.year(), 11, 28));
+    return new DateKit(dec28).isoWeek();
   }
 
   age(toDate?: DateInput): number {
     const to = toDate ? parseDate(toDate) : new Date();
     const birthDate = this.date;
+
+    if (birthDate > to) {
+      throw new RangeError(
+        "age(): this date is in the future relative to the reference date. " +
+          "Pass a birthdate, not a future date."
+      );
+    }
 
     let years = to.getUTCFullYear() - birthDate.getUTCFullYear();
 
@@ -1025,6 +1032,10 @@ export class DateKit {
   // LOCALE
   // ============================================
 
+  /** Returns the active locale name when called with no argument. */
+  locale(): string;
+  /** Returns a new DateKit instance configured to use the given locale. */
+  locale(name: string): DateKit;
   locale(name?: string): string | DateKit {
     if (name === undefined) {
       return this.config.locale!;
@@ -1039,42 +1050,64 @@ export class DateKit {
   static eachDayOfInterval(interval: DateInterval): DateKit[] {
     const start = new DateKit(interval.start);
     const end = new DateKit(interval.end);
-    const days: DateKit[] = [];
 
+    if (start.isAfter(end.toDate(), "day")) {
+      throw new RangeError(
+        "eachDayOfInterval: start date must not be after end date. " +
+          `Got start=${start.toISOString()}, end=${end.toISOString()}.`
+      );
+    }
+
+    const days: DateKit[] = [];
     let current = start.clone();
     while (current.isSameOrBefore(end.toDate(), "day")) {
       days.push(current.clone());
       current = current.add(1, "day");
     }
-
     return days;
   }
 
   static eachWeekOfInterval(interval: DateInterval): DateKit[] {
     const start = new DateKit(interval.start).startOf("week");
     const end = new DateKit(interval.end);
-    const weeks: DateKit[] = [];
 
+    if (start.isAfter(end.toDate(), "week")) {
+      throw new RangeError(
+        "eachWeekOfInterval: start date must not be after end date. " +
+          `Got start=${new DateKit(
+            interval.start
+          ).toISOString()}, end=${end.toISOString()}.`
+      );
+    }
+
+    const weeks: DateKit[] = [];
     let current = start.clone();
     while (current.isSameOrBefore(end.toDate(), "week")) {
       weeks.push(current.clone());
       current = current.add(1, "week");
     }
-
     return weeks;
   }
 
   static eachMonthOfInterval(interval: DateInterval): DateKit[] {
     const start = new DateKit(interval.start).startOf("month");
     const end = new DateKit(interval.end);
-    const months: DateKit[] = [];
 
+    if (start.isAfter(end.toDate(), "month")) {
+      throw new RangeError(
+        "eachMonthOfInterval: start date must not be after end date. " +
+          `Got start=${new DateKit(
+            interval.start
+          ).toISOString()}, end=${end.toISOString()}.`
+      );
+    }
+
+    const months: DateKit[] = [];
     let current = start.clone();
     while (current.isSameOrBefore(end.toDate(), "month")) {
       months.push(current.clone());
       current = current.add(1, "month");
     }
-
     return months;
   }
 
@@ -1124,5 +1157,27 @@ export class DateKit {
       return new Duration(value, unit);
     }
     return new Duration(value as DurationObject);
+  }
+
+  /**
+   * Parses a date string using an explicit format string.
+   *
+   * @param dateStr - The date string to parse, e.g. "15/08/2025"
+   * @param formatStr - The format, e.g. "DD/MM/YYYY"
+   * @param config - Optional DateKitConfig to attach to the result
+   * @returns A new DateKit instance
+   *
+   * @example
+   * DateKit.parse("15-08-2025", "DD-MM-YYYY")         // Aug 15 2025
+   * DateKit.parse("08/31/2025 02:30 PM", "MM/DD/YYYY hh:mm A")  // Aug 31 14:30
+   * DateKit.parse("2025 W33", ...)                   // not supported — use ISO strings
+   */
+  static parse(
+    dateStr: string,
+    formatStr: string,
+    config?: DateKitConfig
+  ): DateKit {
+    const parsed = parseDateFromFormat(dateStr, formatStr);
+    return new DateKit(parsed, config);
   }
 }

@@ -34,26 +34,33 @@ export interface SetDateValues {
 
 export interface LocaleConfig {
   name: string;
+  /** Text direction. Use this to apply CSS `direction` automatically for RTL languages (ar, ur). */
+  dir?: "ltr" | "rtl";
   weekdays: string[];
   weekdaysShort: string[];
   weekdaysMin: string[];
   months: string[];
   monthsShort: string[];
   ordinal: (n: number) => string;
+  /**
+   * Relative-time strings. Multi-unit keys (mm, hh, dd, MM, yy) may be either
+   * a `string` with a `%d` placeholder OR a `(n: number) => string` function
+   * for languages with complex plural rules (e.g. Russian).
+   */
   relativeTime: {
     future: string;
     past: string;
     s: string;
     m: string;
-    mm: string;
+    mm: string | ((n: number) => string);
     h: string;
-    hh: string;
+    hh: string | ((n: number) => string);
     d: string;
-    dd: string;
+    dd: string | ((n: number) => string);
     M: string;
-    MM: string;
+    MM: string | ((n: number) => string);
     y: string;
-    yy: string;
+    yy: string | ((n: number) => string);
   };
   calendar: {
     sameDay: string;
