@@ -28,13 +28,14 @@ export function formatCalendar(
     format = localeConfig.calendar.sameElse;
   }
 
-  // Simple template replacement
+  // Replace all [literal text] bracket pairs, then substitute tokens.
+  // LT and L are replaced with whole-word regexes (LT first, so "L" can't
+  // accidentally eat the first char of "LT"). /g handles multiple occurrences.
   format = format
-    .replace("[", "")
-    .replace("]", "")
-    .replace("LT", dk.format("HH:mm"))
-    .replace("L", dk.format("MM/DD/YYYY"))
-    .replace("dddd", localeConfig.weekdays[date.getUTCDay()]);
+    .replace(/\[([^\]]*?)\]/g, "$1")
+    .replace(/\bLT\b/g, dk.format("HH:mm"))
+    .replace(/\bL\b/g, dk.format("MM/DD/YYYY"))
+    .replace(/\bdddd\b/g, localeConfig.weekdays[date.getUTCDay()]);
 
   return format;
 }

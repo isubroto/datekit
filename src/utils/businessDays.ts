@@ -34,13 +34,22 @@ export function addBusinessDays(
   return result;
 }
 
+/**
+ * Returns the number of business days between two dates.
+ *
+ * Follows the open-start / closed-end convention (consistent with diff()):
+ * the start date is excluded and the end date is included.
+ * e.g. businessDaysBetween(Mon, Wed) = 2  (Tue, Wed)
+ */
 export function businessDaysBetween(
   startDate: Date,
   endDate: Date,
   holidays: Date[] = []
 ): number {
   let count = 0;
+  // Clone and advance by one day to exclude the start date
   const current = new Date(startDate);
+  current.setUTCDate(current.getUTCDate() + 1);
   const end = new Date(endDate);
 
   while (current <= end) {
