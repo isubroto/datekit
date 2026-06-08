@@ -17,6 +17,8 @@ export type QuarterNumber = 1 | 2 | 3 | 4;
 
 export type RoundingMode = "trunc" | "floor" | "ceil" | "halfExpand";
 
+export type OverflowMode = "reject" | "constrain" | "balance";
+
 export interface DiffOptions {
   roundingMode?: RoundingMode;
 }
@@ -26,6 +28,7 @@ export interface DateKitConfig {
   weekStartsOn?: DayOfWeek;
   timezone?: string;
   strictParsing?: boolean;
+  overflow?: OverflowMode;
 }
 
 export interface SetDateValues {

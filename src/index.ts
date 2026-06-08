@@ -11,6 +11,7 @@ export {
   LocaleConfig,
   QuarterNumber,
   RoundingMode,
+  OverflowMode,
   DiffOptions,
 } from "./types";
 export { registerLocale, getLocale } from "./locales";

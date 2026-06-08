@@ -834,7 +834,20 @@ DateKit.parse("25/12/99", "DD/MM/YY").year(); // 1999
 
 // Escape literal text with square brackets (same as format())
 DateKit.parse("Today is 2025-03-25", "[Today is] YYYY-MM-DD");
+
+// Impossible dates throw by default
+DateKit.parse("31/02/2025", "DD/MM/YYYY"); // throws
+
+// Overflow can instead be constrained or balanced
+DateKit.parse("31/02/2025", "DD/MM/YYYY", { overflow: "constrain" });
+// → 2025-02-28
+DateKit.parse("31/02/2025", "DD/MM/YYYY", { overflow: "balance" });
+// → 2025-03-03
 ```
+
+`DateKit.parse()` uses `overflow: "reject"` by default. Negative years are not
+supported. Constructor parsing keeps JavaScript's legacy behavior unless
+`strictParsing` or an explicit `overflow` mode is provided.
 
 **Supported parse tokens:**
 
@@ -1181,6 +1194,9 @@ type QuarterNumber = 1 | 2 | 3 | 4;
 // Difference rounding
 type RoundingMode = "trunc" | "floor" | "ceil" | "halfExpand";
 
+// Parsing overflow behavior
+type OverflowMode = "reject" | "constrain" | "balance";
+
 interface DiffOptions {
   roundingMode?: RoundingMode;
 }
@@ -1191,6 +1207,7 @@ interface DateKitConfig {
   weekStartsOn?: DayOfWeek; // First day of week
   timezone?: string; // IANA timezone
   strictParsing?: boolean; // Strict date parsing
+  overflow?: OverflowMode; // Reject, constrain, or balance date overflow
 }
 
 // For set() method

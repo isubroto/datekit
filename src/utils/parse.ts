@@ -1,4 +1,110 @@
-import { DateInput } from "../types";
+import { DateInput, OverflowMode } from "../types";
+
+interface DateComponents {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  ms: number;
+}
+
+function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function daysInMonth(year: number, month: number): number {
+  if (month === 2) return isLeapYear(year) ? 29 : 28;
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+function constrain(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function createUtcDate(components: DateComponents): Date {
+  const date = new Date(0);
+  date.setUTCFullYear(components.year, components.month - 1, components.day);
+  date.setUTCHours(
+    components.hour,
+    components.minute,
+    components.second,
+    components.ms
+  );
+  return date;
+}
+
+function createLocalDate(components: DateComponents): Date {
+  const date = new Date(0);
+  date.setFullYear(components.year, components.month - 1, components.day);
+  date.setHours(
+    components.hour,
+    components.minute,
+    components.second,
+    components.ms
+  );
+  return date;
+}
+
+function componentsMatch(date: Date, expected: DateComponents): boolean {
+  return (
+    date.getUTCFullYear() === expected.year &&
+    date.getUTCMonth() + 1 === expected.month &&
+    date.getUTCDate() === expected.day &&
+    date.getUTCHours() === expected.hour &&
+    date.getUTCMinutes() === expected.minute &&
+    date.getUTCSeconds() === expected.second &&
+    date.getUTCMilliseconds() === expected.ms
+  );
+}
+
+function normalizeComponents(
+  components: DateComponents,
+  overflow: OverflowMode,
+  source: string
+): DateComponents {
+  if (overflow === "balance") return components;
+
+  if (overflow === "constrain") {
+    const month = constrain(components.month, 1, 12);
+    return {
+      year: components.year,
+      month,
+      day: constrain(components.day, 1, daysInMonth(components.year, month)),
+      hour: constrain(components.hour, 0, 23),
+      minute: constrain(components.minute, 0, 59),
+      second: constrain(components.second, 0, 59),
+      ms: constrain(components.ms, 0, 999),
+    };
+  }
+
+  const valid =
+    components.year >= 0 &&
+    components.month >= 1 &&
+    components.month <= 12 &&
+    components.day >= 1 &&
+    components.day <= daysInMonth(components.year, components.month) &&
+    components.hour >= 0 &&
+    components.hour <= 23 &&
+    components.minute >= 0 &&
+    components.minute <= 59 &&
+    components.second >= 0 &&
+    components.second <= 59 &&
+    components.ms >= 0 &&
+    components.ms <= 999;
+
+  if (!valid) {
+    throw new Error(`DateKit.parse: "${source}" contains invalid date values.`);
+  }
+
+  const date = createUtcDate(components);
+  if (!componentsMatch(date, components)) {
+    throw new Error(`DateKit.parse: "${source}" contains invalid date values.`);
+  }
+
+  return components;
+}
 
 /**
  * Token definitions for format-string parsing.
@@ -37,7 +143,11 @@ const SORTED_PARSE_TOKENS = [...PARSE_TOKENS].sort(
  * Returns a Date built from UTC components.
  * Throws if the string doesn't match the format.
  */
-export function parseDateFromFormat(dateStr: string, formatStr: string): Date {
+export function parseDateFromFormat(
+  dateStr: string,
+  formatStr: string,
+  overflow: OverflowMode = "reject"
+): Date {
   // Step 1: Escape literal [...] sections in the format and record them
   const literals: string[] = [];
   const fmtWithPlaceholders = formatStr.replace(
@@ -124,6 +234,20 @@ export function parseDateFromFormat(dateStr: string, formatStr: string): Date {
     }
   });
 
+  if ("hour12" in parsed) {
+    if (
+      overflow === "reject" &&
+      (parsed["hour12"] < 1 || parsed["hour12"] > 12)
+    ) {
+      throw new Error(
+        `DateKit.parse: "${dateStr}" contains invalid date values.`
+      );
+    }
+    if (overflow === "constrain") {
+      parsed["hour12"] = constrain(parsed["hour12"], 1, 12);
+    }
+  }
+
   // Resolve 12-hour clock
   if ("hour12" in parsed || ampm) {
     let h = parsed["hour12"] ?? parsed["hour"];
@@ -133,17 +257,21 @@ export function parseDateFromFormat(dateStr: string, formatStr: string): Date {
     delete parsed["hour12"];
   }
 
-  return new Date(
-    Date.UTC(
-      parsed["year"],
-      parsed["month"] - 1,
-      parsed["day"],
-      parsed["hour"] ?? 0,
-      parsed["minute"] ?? 0,
-      parsed["second"] ?? 0,
-      parsed["ms"] ?? 0
-    )
+  const components = normalizeComponents(
+    {
+      year: parsed["year"],
+      month: parsed["month"],
+      day: parsed["day"],
+      hour: parsed["hour"] ?? 0,
+      minute: parsed["minute"] ?? 0,
+      second: parsed["second"] ?? 0,
+      ms: parsed["ms"] ?? 0,
+    },
+    overflow,
+    dateStr
   );
+
+  return createUtcDate(components);
 }
 
 /**
@@ -156,9 +284,66 @@ export function parseDateFromFormat(dateStr: string, formatStr: string): Date {
  *   2025-08-31T14:30:00+06:00           (offset)
  */
 const ISO_PATTERN =
-  /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
+  /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?(Z|([+-])(\d{2}):?(\d{2}))?)?$/;
 
-export function parseDate(input: DateInput, strict?: boolean): Date {
+function parseIsoDate(input: string, overflow: OverflowMode): Date {
+  const match = input.match(ISO_PATTERN);
+  if (!match) {
+    throw new Error(
+      `Strict parsing failed: "${input}" is not an unambiguous ISO 8601 date string. ` +
+        `Use a format like "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm:ssZ", ` +
+        `or disable strict mode.`
+    );
+  }
+
+  const components = normalizeComponents(
+    {
+      year: parseInt(match[1], 10),
+      month: parseInt(match[2], 10),
+      day: parseInt(match[3], 10),
+      hour: match[4] ? parseInt(match[4], 10) : 0,
+      minute: match[5] ? parseInt(match[5], 10) : 0,
+      second: match[6] ? parseInt(match[6], 10) : 0,
+      ms: match[7]
+        ? parseInt(match[7].slice(0, 3).padEnd(3, "0"), 10)
+        : 0,
+    },
+    overflow,
+    input
+  );
+
+  if (!match[4] || match[8]) {
+    const date = createUtcDate(components);
+    if (match[8] && match[8] !== "Z") {
+      let offsetHour = parseInt(match[10], 10);
+      let offsetMinute = parseInt(match[11], 10);
+
+      if (overflow === "reject" && (offsetHour > 23 || offsetMinute > 59)) {
+        throw new Error(
+          `DateKit.parse: "${input}" contains invalid date values.`
+        );
+      }
+      if (overflow === "constrain") {
+        offsetHour = constrain(offsetHour, 0, 23);
+        offsetMinute = constrain(offsetMinute, 0, 59);
+      }
+
+      const sign = match[9] === "+" ? 1 : -1;
+      date.setTime(
+        date.getTime() - sign * (offsetHour * 60 + offsetMinute) * 60_000
+      );
+    }
+    return date;
+  }
+
+  return createLocalDate(components);
+}
+
+export function parseDate(
+  input: DateInput,
+  strict?: boolean,
+  overflow?: OverflowMode
+): Date {
   if (input instanceof Date) {
     return new Date(input);
   }
@@ -168,12 +353,11 @@ export function parseDate(input: DateInput, strict?: boolean): Date {
   }
 
   if (typeof input === "string") {
-    if (strict && !ISO_PATTERN.test(input.trim())) {
-      throw new Error(
-        `Strict parsing failed: "${input}" is not an unambiguous ISO 8601 date string. ` +
-          `Use a format like "YYYY-MM-DD" or "YYYY-MM-DDTHH:mm:ssZ", ` +
-          `or disable strict mode.`
-      );
+    const trimmed = input.trim();
+    if (strict || overflow) {
+      if (strict || ISO_PATTERN.test(trimmed)) {
+        return parseIsoDate(trimmed, strict ? "reject" : overflow ?? "balance");
+      }
     }
     return new Date(input);
   }

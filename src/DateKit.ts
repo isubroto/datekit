@@ -38,7 +38,7 @@ export class DateKit {
     this.date =
       date === undefined
         ? new Date()
-        : parseDate(date, this.config.strictParsing);
+        : parseDate(date, this.config.strictParsing, this.config.overflow);
 
     if (!isValidDate(this.date)) {
       throw new Error("Invalid date provided");
@@ -1193,7 +1193,7 @@ export class DateKit {
    *
    * @param dateStr - The date string to parse, e.g. "15/08/2025"
    * @param formatStr - The format, e.g. "DD/MM/YYYY"
-   * @param config - Optional DateKitConfig to attach to the result
+   * @param config - Optional DateKitConfig. Overflow defaults to "reject".
    * @returns A new DateKit instance
    *
    * @example
@@ -1206,7 +1206,11 @@ export class DateKit {
     formatStr: string,
     config?: DateKitConfig
   ): DateKit {
-    const parsed = parseDateFromFormat(dateStr, formatStr);
+    const parsed = parseDateFromFormat(
+      dateStr,
+      formatStr,
+      config?.overflow ?? "reject"
+    );
     return new DateKit(parsed, config);
   }
 }
