@@ -15,6 +15,12 @@ export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export type QuarterNumber = 1 | 2 | 3 | 4;
 
+export type RoundingMode = "trunc" | "floor" | "ceil" | "halfExpand";
+
+export interface DiffOptions {
+  roundingMode?: RoundingMode;
+}
+
 export interface DateKitConfig {
   locale?: string;
   weekStartsOn?: DayOfWeek;

@@ -175,6 +175,10 @@ const configured = new DateKit("2024-03-15", {
 });
 ```
 
+Only an omitted or `undefined` date defaults to the current time. Timestamp `0`
+represents the Unix epoch. Invalid explicit inputs, including empty strings and
+runtime `null` values, throw an error (`null` is not part of `DateInput`).
+
 ---
 
 ### Formatting
@@ -532,6 +536,11 @@ end.diff(start, "month", true); // 2.467...
 
 // Negative differences (when comparing backwards)
 start.diff(end, "day"); // -74
+
+// Explicit integer rounding (default: "trunc")
+start.diff(end, "day", { roundingMode: "floor" }); // -75
+start.diff(end, "day", { roundingMode: "ceil" }); // -74
+start.diff(end, "day", { roundingMode: "halfExpand" }); // -75
 
 // Common use case: age calculation
 const birthdate = new DateKit("1990-05-15");
@@ -1137,6 +1146,8 @@ import type {
   LocaleConfig,
   QuarterNumber,
   DayOfWeek,
+  RoundingMode,
+  DiffOptions,
 } from "@subrotosaha/datekit";
 
 import { DateRange } from "@subrotosaha/datekit";
@@ -1166,6 +1177,13 @@ type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 // Quarter numbers
 type QuarterNumber = 1 | 2 | 3 | 4;
+
+// Difference rounding
+type RoundingMode = "trunc" | "floor" | "ceil" | "halfExpand";
+
+interface DiffOptions {
+  roundingMode?: RoundingMode;
+}
 
 // Configuration options
 interface DateKitConfig {

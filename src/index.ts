@@ -10,6 +10,8 @@ export {
   DurationObject,
   LocaleConfig,
   QuarterNumber,
+  RoundingMode,
+  DiffOptions,
 } from "./types";
 export { registerLocale, getLocale } from "./locales";
 export * from "./locales/en";

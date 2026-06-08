@@ -6,6 +6,8 @@ import {
   DateInterval,
   DurationObject,
   QuarterNumber,
+  DiffOptions,
+  RoundingMode,
 } from "./types";
 import { formatDate } from "./utils/format";
 import { parseDate, parseDateFromFormat } from "./utils/parse";
@@ -33,7 +35,10 @@ export class DateKit {
       ...config,
     };
 
-    this.date = date ? parseDate(date, this.config.strictParsing) : new Date();
+    this.date =
+      date === undefined
+        ? new Date()
+        : parseDate(date, this.config.strictParsing);
 
     if (!isValidDate(this.date)) {
       throw new Error("Invalid date provided");
@@ -860,12 +865,17 @@ export class DateKit {
   // ============================================
 
   diff(
-    date: DateInput,
+    date: DateInput | DateKit,
     unit: TimeUnit = "millisecond",
-    precise: boolean = false
+    preciseOrOptions: boolean | DiffOptions = false
   ): number {
-    const otherDate = parseDate(date);
+    const otherDate = date instanceof DateKit ? date.toDate() : parseDate(date);
     const diff = this.date.getTime() - otherDate.getTime();
+    const precise = preciseOrOptions === true;
+    const roundingMode =
+      typeof preciseOrOptions === "object"
+        ? preciseOrOptions.roundingMode ?? "trunc"
+        : "trunc";
 
     let divisor = 1;
 
@@ -894,7 +904,7 @@ export class DateKit {
       case "quarter":
         return precise
           ? diff / (1000 * 60 * 60 * 24 * 91.3125)
-          : Math.floor(this.diffMonth(otherDate) / 3);
+          : this.roundDiff(this.diffMonth(otherDate) / 3, roundingMode);
       case "year":
         return precise
           ? diff / (1000 * 60 * 60 * 24 * 365.25)
@@ -902,7 +912,20 @@ export class DateKit {
     }
 
     const result = diff / divisor;
-    return precise ? result : Math.floor(result);
+    return precise ? result : this.roundDiff(result, roundingMode);
+  }
+
+  private roundDiff(value: number, roundingMode: RoundingMode): number {
+    switch (roundingMode) {
+      case "trunc":
+        return Math.trunc(value);
+      case "floor":
+        return Math.floor(value);
+      case "ceil":
+        return Math.ceil(value);
+      case "halfExpand":
+        return value < 0 ? -Math.round(-value) : Math.round(value);
+    }
   }
 
   private diffMonth(otherDate: Date): number {
@@ -944,7 +967,10 @@ export class DateKit {
   // ============================================
 
   calendar(referenceDate?: DateInput): string {
-    const ref = referenceDate ? parseDate(referenceDate) : new Date();
+    const ref =
+      referenceDate === undefined
+        ? new Date()
+        : new DateKit(referenceDate, this.config).toDate();
     return formatCalendar(this.date, ref, this.config.locale);
   }
 
@@ -953,8 +979,11 @@ export class DateKit {
   // ============================================
 
   duration(date?: DateInput): Duration {
-    if (date) {
-      return Duration.between(this.date, parseDate(date));
+    if (date !== undefined) {
+      return Duration.between(
+        this.date,
+        new DateKit(date, this.config).toDate()
+      );
     }
     return new Duration(this.date.getTime());
   }
@@ -977,7 +1006,10 @@ export class DateKit {
   }
 
   age(toDate?: DateInput): number {
-    const to = toDate ? parseDate(toDate) : new Date();
+    const to =
+      toDate === undefined
+        ? new Date()
+        : new DateKit(toDate, this.config).toDate();
     const birthDate = this.date;
 
     if (birthDate > to) {
@@ -1120,9 +1152,6 @@ export class DateKit {
   }
 
   static utc(date?: DateInput): DateKit {
-    if (!date) {
-      return new DateKit(new Date());
-    }
     return new DateKit(date);
   }
 
